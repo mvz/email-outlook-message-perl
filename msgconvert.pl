@@ -17,8 +17,9 @@
 # Public License for more details.
 #
 # TODO (Functional)
-# - Use address data to make To: and Cc: lines complete
-# - Make use of more of the items, if possible.
+# - Allow more than one file to be specified on the command line
+# - Allow an output file to be specified on the command line
+# - (Ongoing...) Make use of more of the items, if possible.
 #
 # CHANGES:
 # 20020715  Recognize new items 'Cc', mime type of attachment, long
@@ -47,6 +48,12 @@
 #	    Don't produce multipart messages if not needed.
 #	    (Bug reported by Justin B. Scout).
 # 20040529  Correctly format OLEDATE.
+# 20040530  - Extract date from property 0047 (thanks, Marc Goodman).
+#	    - Use address data to make To: and Cc: lines complete
+#	    - Use the in-reply-to property
+#	    - More unknown properties named.
+#	    - Found another property containing an SMTP address.
+#	    - Put non-SMTP type addresses back in output.
 #
 
 #
@@ -74,12 +81,20 @@ our $skipproperties = {
   '0040' => "'recieved by' name",
   '0041' => "Sender variant address id",
   '0042' => "Sender variant name",
+  '0043' => "'recieved representing' id",
+  '0044' => "'recieved representing' name",
   '0046' => "Read receipt address id",
+  '0051' => "'recieved by' search key",
+  '0052' => "'recieved representing' search key",
   '0053' => "Read receipt search key",
   '0064' => "Sender variant address type",
   '0065' => "Sender variant address",
   '0070' => "Conversation topic",
   '0071' => "Conversation index",
+  '0075' => "'recieved by' address type",
+  '0076' => "'recieved by' email address",
+  '0077' => "'recieved representing' address type",
+  '0078' => "'recieved representing' email address",
   # Recipient properties
   '0C19' => "Reply address variant",
   '0C1D' => "Reply address variant",
@@ -98,6 +113,10 @@ our $skipproperties = {
   '3001' => "Display name",
   '3002' => "Address Type",
   '300B' => "'Search key'",
+  # Attachment properties
+  '3702' => "Attachment encoding",
+  '3703' => "Attachment extension",
+  '3709' => "'Attachment rendering'", # Maybe an icon or something?
   # 'Mail user'
   '3A20' => "Address variant",
   # 3900 -- 39FF: 'Address book'
@@ -111,8 +130,13 @@ our $skipproperties = {
   '4029' => "Sender variant address type",
   '402A' => "Sender variant address",
   '402B' => "Sender variant name",
+  '5FF6' => "Recipient name",
+  '5FF7' => "Recipient address variant",
+  # 'Provider-defined internal non-transmittable property'
+  '6740' => "Unknown, binary data",
   # User defined id's
   '8000' => "Content Class",
+  '8002' => "Unknown, binary data",
 };
 
 our $skipheaders = {
@@ -156,12 +180,14 @@ sub parse {
   $self->_RootDir($PPS);
 }
 
+# Actually output the message in mbox format
 sub print {
   my $self = shift;
 
   my $bodymime;
   my $ismultipart = 0;
 
+  # Find out if we need to conctruct a multipart message
   if ($self->{BODY_HTML} and $self->{BODY_PLAIN}) {
     $ismultipart = 1;
   }
@@ -171,6 +197,8 @@ sub print {
   my $mime;
 
   if ($ismultipart) {
+    # Construct a multipart message object
+
     $mime = MIME::Entity->build(Type => "multipart/mixed");
 
     # Set the entity that we'll save the body parts to. If there's more than
@@ -204,16 +232,21 @@ sub print {
       $self->_SaveAttachment($mime, $att);
     }
   } elsif ($self->{BODY_PLAIN}) {
+    # Construct a single part message object with a plain text body
     $mime = MIME::Entity->build(
       Type => "text/plain",
       Data => $self->{BODY_PLAIN}
     );
   } elsif ($self->{BODY_HTML}) {
+    # Construct a single part message object with an HTML body
     $mime = MIME::Entity->build(
       Type => "text/html",
       Data => $self->{BODY_HTML}
     );
   }
+
+  # Copy original header data.
+  # Note: This should contain the Date: header.
   my $head = $self->{HEAD};
   if (defined $head) {
     foreach my $tag ($head->tags) {
@@ -226,17 +259,21 @@ sub print {
   }
 
   # Set header fields
+
+  # If we didn't get the date from the original header data, we may be able
+  # to get it from the SUBMISSION_ID:
+  $self->_AddHeaderField($mime, 'Date', $self->_SubmissionIdDate());
+
+  # Third and last chance to set the Date: header; this uses the date the
+  # MSG file was saved.
   $self->_AddHeaderField($mime, 'Date', $self->{OLEDATE});
   $self->_AddHeaderField($mime, 'Subject', $self->{SUBJECT});
   $self->_AddHeaderField($mime, 'From', $self->_Address("FROM"));
   #$self->_AddHeaderField($mime, 'Reply-To', $self->_Address("REPLYTO"));
-  $self->_AddHeaderField($mime, 'To', $self->{TO});
-  $self->_AddHeaderField($mime, 'Cc', $self->{CC});
+  $self->_AddHeaderField($mime, 'To', $self->_ExpandAddressList($self->{TO}));
+  $self->_AddHeaderField($mime, 'Cc', $self->_ExpandAddressList($self->{CC}));
   $self->_AddHeaderField($mime, 'Message-Id', $self->{MESSAGEID});
-
-  foreach my $address (@{$self->{ADDRESSES}}) {
-    warn "Address ($address->{TYPE}): $address->{NAME} <$address->{ADDRESS}>\n";
-  }
+  $self->_AddHeaderField($mime, 'In-Reply-To', $self->{INREPLYTO});
 
   # Construct From line from whatever we know.
   my $string = "";
@@ -246,9 +283,9 @@ sub print {
     'someone@somewhere'
   );
   $string =~ s/\n//g;
-  # TODO: Get the real date.
-  my $fromdate = $mime->head->get('Date');
-  print "From ", $string, " ", $fromdate;
+
+  # The date used here is not really important.
+  print "From ", $string, " ", scalar localtime, "\n";
   $mime->print(\*STDOUT);
   print "\n";
 }
@@ -330,6 +367,8 @@ sub _SubItem {
 	  $self->{CC} = $data;
 	} elsif ($property eq '1035') {	# Message-Id
 	  $self->{MESSAGEID} = $data;
+	} elsif ($property eq '1042') {	# In reply to Message-Id
+	  $self->{INREPLYTO} = $data;
 	} else {
 	  $self->_UnknownFile($name);
 	}
@@ -374,18 +413,18 @@ sub _AddressItem {
       $data =~ s/\000//g;
       if ($property eq '3001') {	# Real Name
 	$addr_info->{NAME} = $data;
-      } elsif ($property eq '403D') {	# Address type
+      } elsif (
+	$property eq '3002' or
+	$property eq '403D'
+      ) {	# Address type
 	$addr_info->{TYPE} = $data;
       } elsif (
 	$property eq '3003' or
 	$property eq '403E'
       ) {	# Address
-	if ($data =~ /@/) {
-	  if (defined ($addr_info->{ADDRESS})) {
-	    warn "More than one address";
-	  }
-	  $addr_info->{ADDRESS} = $data;
-	}
+	$addr_info->{ADDRESS} = $data;
+      } elsif ($property eq '39FE') {	# SMTP Address variant
+	$addr_info->{SMTPADDRESS} = $data;
       } else {
 	$self->_UnknownFile($name);
       }
@@ -512,14 +551,40 @@ sub _GetOLEDate {
   my $PPS = shift;
   unless (defined ($self->{OLEDATE})) {
     # Make Date
-    my $date;
-    $date = $PPS->{Time2nd};
-    $date = $PPS->{Time1st} unless($date);
-    if ($date) {
-      # TODO: This is a little convoluted.
-      my $time = mktime(@$date);
-      $self->{OLEDATE} = time2str("%a, %d %h %Y %X %z", $time);
-    }
+    my $datearr;
+    $datearr = $PPS->{Time2nd};
+    $datearr = $PPS->{Time1st} unless($datearr);
+    $self->{OLEDATE} = $self->_FormatDate($datearr) if $datearr;
+  }
+}
+
+sub _FormatDate {
+  my $self = shift;
+  my $datearr = shift;
+
+  # TODO: This is a little convoluted. Directly using strftime didn't seem
+  # to work.
+  my $datetime = mktime(@$datearr);
+  return time2str("%a, %d %h %Y %X %z", $datetime);
+}
+
+# If we didn't get the date from the original header data, we may be able
+# to get it from the SUBMISSION_ID:
+# It seems to have the format of a semicolon-separated list of key=value
+# pairs. The key l has a value with the format:
+# <SERVER>-<DATETIME>Z-<NUMBER>, where DATETIME is the date and time in
+# the format YYMMDDHHMMSS.
+sub _SubmissionIdDate {
+  my $self = shift;
+  my $submission_id = $self->{SUBMISSION_ID};
+  if (defined $submission_id) {
+    $submission_id =~ m/l=.*-(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)Z-.*/;
+    my $year = $1;
+    $year += 100 if $year < 20;
+    my $datestr = $self->_FormatDate([$6,$5,$4,$3,$2-1,$year]);
+    return $datestr;
+  } else {
+    return undef;
   }
 }
 
@@ -600,7 +665,35 @@ sub _Address {
   my $name = $self->{$tag};
   my $address = $self->{$tag . "_ADDR"};
   my $type = $self->{$tag . "_ADDR_TYPE"};
-  return "\"$name\"" . ($type eq "SMTP" ? " <$address>" : "");
+  #return "$name" . ($type eq "SMTP" ? " <$address>" : " <>");
+  return "$name" . " <$address>";
+}
+
+# Find SMTP addresses for the given list of names
+sub _ExpandAddressList {
+  my $self = shift;
+  my $names = shift;
+
+  my $addresspool = $self->{ADDRESSES};
+  my @namelist = split /; */, $names;
+  my @result;
+  name: foreach my $name (@namelist) {
+    foreach my $address (@$addresspool) {
+      if ($name eq $address->{NAME}) {
+	my $addresstext = $address->{NAME} . " <";
+	if (defined ($address->{SMTPADDRESS})) {
+	  $addresstext .= $address->{SMTPADDRESS};
+	} elsif ($address->{TYPE} eq "SMTP") {
+	  $addresstext .= $address->{ADDRESS};
+	}
+	$addresstext .= ">";
+	push @result, $addresstext;
+	next name;
+      }
+    }
+    push @result, $name;
+  }
+  return join ", ", @result;
 }
 
 sub _ParseHead {
