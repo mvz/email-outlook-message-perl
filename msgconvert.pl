@@ -31,10 +31,6 @@
 # - Make functional part into a module.
 #
 # CHANGES:
-# 20040214  Fix typos and incorrect comments.
-# 20040104  Handle address data slightly better, make From line less fake,
-#	    make $verbose and $skippable_entries global vars, handle HTML
-#	    variant of body text if present (though not optimally).
 # 20020715  Recognize new items 'Cc', mime type of attachment, long
 #	    filename of attachment, and full headers. Attachments turn out
 #	    to be numbered, so a regexp is now used to recognize label of
@@ -44,6 +40,10 @@
 #	    generic system for specifying known items to be skipped.
 #	    Unexpected contents is never reason to bail out anymore. Added
 #	    support for usage message and option processing (--verbose).
+# 20040104  Handle address data slightly better, make From line less fake,
+#	    make $verbose and $skippable_entries global vars, handle HTML
+#	    variant of body text if present (though not optimally).
+# 20040214  Fix typos and incorrect comments.
 
 #
 # Import modules.

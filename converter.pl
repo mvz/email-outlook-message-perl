@@ -42,6 +42,10 @@
 #	    - Item names are parsed, thanks to bfrederi@alumni.sfu.ca for
 #	      the information
 #
+
+#
+# Import modules.
+#
 package MSGParser;
 use strict;
 use OLE::Storage_Lite;
