@@ -31,6 +31,7 @@
 # - Make functional part into a module.
 #
 # CHANGES:
+# 20040214  Fix typos and incorrect comments.
 # 20040104  Handle address data slightly better, make From line less fake,
 #	    make $verbose and $skippable_entries global vars, handle HTML
 #	    variant of body text if present (though not optimally).
@@ -45,7 +46,7 @@
 #	    support for usage message and option processing (--verbose).
 
 #
-# Impost modules.
+# Import modules.
 #
 use strict;
 use Getopt::Long;
@@ -412,10 +413,6 @@ sub SetHeader {
 
 #
 # Add an email address to the mime header, given a structure:
-# {
-#   'Name' => "somename",
-#   'Address' => "someaddress@somewhere"
-# }
 #
 sub AddAddressHeader {
     my $Mime = shift;
