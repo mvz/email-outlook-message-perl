@@ -2,9 +2,9 @@
 #
 # msgconvert.pl:
 #
-# Convert .MSG files (made by Outlook Express) to multipart MIME messages.
+# Convert .MSG files (made by Outlook (Express)) to multipart MIME messages.
 #
-# Copyright 2002 Matijs van Zuijlen
+# Copyright 2002, 2004 Matijs van Zuijlen
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -16,15 +16,24 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
 # Public License for more details.
 #
-# TODO:
-# - Wishlist: Make use of more of the items.
+# TODO (Functional)
 # - Make sanity checks when setting mime/mail headers: are duplicates
-# created, are values overwritten?
-# - Make From (Not From:) line less fake.
+#   created, are values overwritten?
+# - Use address data to make To: and Cc: lines complete
+# - Fix full header parsing, and use it to get more data
+# - Make use of more of the items, if possible.
+# TODO (Technical)
+# - Do not use Mime object for storage while parsing the file. This will
+#   make it possible to postpone certain decisions until all all the facts
+#   are known.
 # - Refactor handling of more items into separate functions.
-# - Wishlist: Parse item names: There must be some structure in them.
+# - Parse item names: There must be some structure in them.
+# - Make functional part into a module.
 #
 # CHANGES:
+# 20040104  Handle address data slightly better, make From line less fake,
+#	    make $verbose and $skippable_entries global vars, handle HTML
+#	    variant of body text if present (though not optimally).
 # 20020715  Recognize new items 'Cc', mime type of attachment, long
 #	    filename of attachment, and full headers. Attachments turn out
 #	    to be numbered, so a regexp is now used to recognize label of
@@ -36,7 +45,7 @@
 #	    support for usage message and option processing (--verbose).
 
 #
-# Start of main program.
+# Impost modules.
 #
 use strict;
 use Getopt::Long;
@@ -44,144 +53,163 @@ use OLE::Storage_Lite;
 use MIME::Entity;
 use MIME::Parser;
 use Pod::Usage;
+use POSIX qw(mktime ctime);
 
-# Setup command line processing.
-my $verbose = '';  # Be verbose about skipped and unknown entries;
-my $help = '';	    # Print help message and exit.
-GetOptions('verbose' => \$verbose, 'help|?' => \$help) or pod2usage(2);
-pod2usage(1) if $help;
+#
+# Note: These are the only two global variables. They're global since
+# they're almost like constants.
+#
+my $verbose;		# Be verbose about skipped and unknown entries;
+my $skippable_entries;	# Entries we don't want to use
 
-# Get file name
-my $file = $ARGV[0];
-defined $file or pod2usage(2);
+main();
 
-# Load and parse MSG file (is OLE)
-my $Msg = OLE::Storage_Lite->new($file);
-my $PPS = $Msg->getPpsTree(1);
-$PPS or die "$file must be an OLE file";
+#
+# Subroutines go below.
+# 
+sub main {
+    # Setup command line processing.
+    $verbose = '';
+    my $help = '';	    # Print help message and exit.
+    GetOptions('verbose' => \$verbose, 'help|?' => \$help) or pod2usage(2);
+    pod2usage(1) if $help;
 
-# Create Mime message object
-my $Mime = MIME::Entity->build(Type => "multipart/mixed");
+    # Get file name
+    my $file = $ARGV[0];
+    defined $file or pod2usage(2);
 
-# Create and fill Hash to keep lists of entries we skip and their
-# (possible) meanings.
-my $skippable_entries = { };
-FillHashes($skippable_entries);
+    # Load and parse MSG file (is OLE)
+    my $Msg = OLE::Storage_Lite->new($file);
+    my $PPS = $Msg->getPpsTree(1);
+    $PPS or die "$file must be an OLE file";
 
-# We need to keep addresse in a separate structure, because we don't get
-# all bits at once.
-my $addresses = {   'From' => {},
-		    'To' => {},
-		    'Reply-To' => {}, };
+    # Create Mime message object
+    my $Mime = MIME::Entity->build(Type => "multipart/mixed");
 
-# Parse the message
-RootItem($PPS, $Mime, $addresses, $skippable_entries, $verbose);
+    # Fill Hash to keep lists of entries we skip and their (possible)
+    # meanings.
+    $skippable_entries = {};
+    FillHashes($skippable_entries);
 
-# Add the address info to the MIME object.
-foreach my $key (keys %$addresses) {
-    my $address = $addresses->{$key};
-    if (exists $address->{Address}) {
-	my $string = "$address->{Name} <$address->{Address}>";
-	$string =~ s/\000//g;
-	SetHeader($Mime, $key, $string);
+    # We need to keep addresses in a separate structure, because we don't get
+    # all bits at once.
+    my $addresses = {
+	'From' => {},
+	'Reply-To' => {},
+	'ToList' => {},
+	'CcList' => {},
+    };
+
+    # Parse the message
+    RootItem($PPS, $Mime, $addresses);
+
+    # Add the address info to the MIME object.
+    foreach my $key (keys %$addresses) {
+	my $address = $addresses->{$key};
+	AddAddressHeader($Mime, $key, $address);
     }
+
+    # Construct From line from whatever we know.
+    my $string = "";
+    if (exists $addresses->{'From'}->{'Address'}) {
+	$string = $addresses->{'From'}->{'Address'};
+    }
+    if($string =~ /@/) {
+    	$string =~ s/\n//g;
+    } else {
+	$string = 'someone@somewhere';
+    }
+    print "From ", $string, " ", $Mime->head->get('Date') ;
+    $Mime->print(\*STDOUT);
+    print "\n";
 }
-
-# print the message to STDOUT using fake From line.
-print "From someone\@somewhere Fri Mar 15 00:00:01 1900\n";
-$Mime->print(\*STDOUT);
-print "\n";
-
-#
-# End of main program.
-#
 
 #
 # RootItem: Check Root Entry, parse sub-entries.
+# The OLE file consists of a single entry called Root Entry, which has
+# several children. These children are parsed in the sub SubItem.
 # 
 sub RootItem {
     my $PPS = shift;
     my $Mime = shift;
     my $addresses = shift;
-    my $skippable_entries = shift;
-    my $verbose = shift;
 
     my $Name = NormalizeWhiteSpace(OLE::Storage_Lite::Ucs2Asc($PPS->{Name}));
 
-    $Name eq "Root Entry" or die "Unexpected entry $Name";
+    $Name eq "Root Entry" or warn "Unexpected root entry name $Name";
 
     foreach my $Child (@{$PPS->{Child}}) {
-	SubItem($Child, $Mime, $addresses, $skippable_entries, $verbose);
+	SubItem($Child, $Mime, $addresses);
     }
 }
 
 #
 # Parse Level one sub-entries of the Root Entry.
+# Thes can be DIR or FILE type entries.
 #
 sub SubItem {
     my $PPS = shift;
     my $Mime = shift;
     my $addresses = shift;
-    my $skippable_entries = shift;
-    my $verbose = shift;
 
     my $Name = NormalizeWhiteSpace(OLE::Storage_Lite::Ucs2Asc($PPS->{Name}));
     my $Data = $PPS->{Data};
 
     # DIR Entries:
     if ($PPS->{Type}==1) {
-	if ($Name eq '__recip_version1 0_ 00000000') { # Recipient ?
-	    ParseAddress($PPS, $addresses, 'To', $skippable_entries,
-		$verbose);
-	} elsif ($Name eq '__recip_version1 0_ 00000001') { # Sender ?
-	    ParseAddress($PPS, $addresses, 'From', $skippable_entries,
-		$verbose);
+	# Set the OLE date, if we haven't found a date in another way.
+	if (! $Mime->head->count('Date')) {
+	    # Make Date
+	    my $date;
+	    $date = $PPS->{Time2nd};
+	    $date = $PPS->{Time1st} unless($date);
+	    if ($date) {
+		my $time = mktime(@$date);
+		my $datestring = sprintf(
+		    "%02d.%02d.%4d %02d:%02d:%02d",
+		    $date->[3], $date->[4]+1, $date->[5]+1900,
+		    $date->[2], $date->[1],   $date->[0]
+		);
+		SetHeader($Mime, 'Date', ctime($time));
+	    }
+	}
+	if ($Name =~ /__recip_version1 0_ /) { # Address of one recipient
+	    ParseAddress($PPS, $Mime, 'Addresses');
 	} elsif ($Name =~ '__attach_version1 0_ ') { # Attachment
-	    ParseAttachment($PPS, $Mime, $skippable_entries, $verbose);
+	    ParseAttachment($PPS, $Mime);
 	} else {
-	    CheckSkippableEntry($Name, "",
-		$skippable_entries->{SUB_DIR}, $verbose);
+	    CheckSkippableEntry($Name, "", "SUB_DIR");
 	}
     }
     # FILE Entries.
     elsif ($PPS->{Type}==2) {
 	if ($Name eq '__substg1 0_0037001E') {	# Subject
 	    SetHeader($Mime, 'Subject', $Data);
-	} elsif ($Name eq '__substg1 0_0042001E') {	# Sender Name?
-	    SetAddressPart($addresses, 'From', 'Name', $Data, $verbose);
-	} elsif ($Name eq '__substg1 0_0065001E') {	# Sender Address?
-	    SetAddressPart($addresses, 'From', 'Address', $Data, $verbose);
-	} elsif ($Name eq '__substg1 0_0C1A001E') {	# Reply Name?
-	    SetAddressPart($addresses, 'Reply-To', 'Name', $Data,
-		$verbose);
-	} elsif ($Name eq '__substg1 0_0C1F001E') {	# Reply Address?
-	    SetAddressPart($addresses, 'Reply-To', 'Address', $Data,
-		$verbose);
-	} elsif ($Name eq '__substg1 0_0E04001E') {	# Recipient name?
-	    SetAddressPart($addresses, 'To', 'Name', $Data, $verbose);
-	} elsif ($Name eq '__substg1 0_0E03001E') {	# Cc: Addresses?
-	    $Data =~ s/\000//g;
-	    unless ($Data eq "") {
-		SetHeader($Mime, 'Cc', $Data);
-	    }
+	} elsif ($Name eq '__substg1 0_0042001E') {	# From: Name?
+	    SetAddressPart($addresses->{'From'}, 'Name', $Data);
+	} elsif ($Name eq '__substg1 0_0065001E') {	# From: Address?
+	    SetAddressPart($addresses->{'From'}, 'Address', $Data);
+	} elsif ($Name eq '__substg1 0_0C1A001E') {	# Reply-To: Name?
+	    SetAddressPart($addresses->{'Reply-To'}, 'Name', $Data);
+	} elsif ($Name eq '__substg1 0_0C1F001E') {	# Reply-To: Address?
+	    SetAddressPart($addresses->{'Reply-To'}, 'Address', $Data);
+	} elsif ($Name eq '__substg1 0_0E04001E') {	# To: Names
+	    SetAddressPart($addresses->{'ToList'}, 'Name', $Data);
+	} elsif ($Name eq '__substg1 0_0E03001E') {	# Cc: Names
+	    SetAddressPart($addresses->{'CcList'}, 'Name', $Data);
 	} elsif ($Name eq '__substg1 0_1000001E') {	# Body
-	    my $handle;
-	    my $ent = $Mime->attach(
-		    Type => 'text/plain',
-		    Encoding => 'quoted-printable',
-		    Data => []);
-	    $Data =~ s/\015//g;
-	    $Data =~ s/\000//g;
-	    if ($handle = $ent->open("w")) {
-		$handle->print($Data);
-		$handle->close;
-	    } else {
-		warn "Could not write body data!";
-	    }
+	    SaveBody($Mime, $Data, 'text/plain; charset=ISO-8859-1');
+	} elsif ($Name eq '__substg1 0_10130102') {	# HTML Version of body
+	    SaveBody($Mime, $Data, "text/html");
 	} elsif ($Name eq '__substg1 0_007D001E') {	# Full headers
+	    warn "Adding full header info:\n";
 	    my $parser = new MIME::Parser;
 	    $parser->output_to_core(1);
-	    my $entity = $parser->parse_data($Data);
+	    $parser->decode_headers(1);
+	    #$parser->ignore_errors(0);
+	    my $entity = $parser->parse_data($Data)
+		or warn "Couldn't parse full headers!"; 
+	    # $entity->dump_skeleton;
 	    my $head = $entity->head;
 	    $head->unfold;
 	    foreach my $tag ($head->tags) {
@@ -191,14 +219,14 @@ sub SubItem {
 		} else {
 		    $writetag = "X-MsgConvert-Original-$tag";
 		}
+		warn "Tag: $tag -> $writetag\n";
 		my @values = $head->get_all($tag);
 		foreach my $value (@values) {
 		    $Mime->head->add($writetag, $value);
 		}
 	    };
 	} else {
-	    CheckSkippableEntry($Name, $Data,
-		$skippable_entries->{SUB}, $verbose);
+	    CheckSkippableEntry($Name, $Data, "SUB");
 	}
     }
     else {
@@ -211,15 +239,15 @@ sub SubItem {
 #
 sub ParseAddress {
     my $PPS = shift;
-    my $addresses = shift;
+    my $Mime = shift;
     my $entry = shift;
-    my $skippable_entries = shift;
-    my $verbose = shift;
 
+    #warn "Processing address subitem $entry\n";
+    my $address = {};
     foreach my $Child (@{$PPS->{Child}}) {
-	AddressItem($Child, $addresses, $entry, $skippable_entries,
-	    $verbose);
+	AddressItem($Child, $address, $entry);
     }
+    AddAddressHeader($Mime, $entry, $address);
 }
 
 #
@@ -227,10 +255,7 @@ sub ParseAddress {
 #
 sub AddressItem {
     my $PPS = shift;
-    my $addresses = shift;
-    my $entry = shift;
-    my $skippable_entries = shift;
-    my $verbose = shift;
+    my $address = shift;
 
     my $Name = NormalizeWhiteSpace(OLE::Storage_Lite::Ucs2Asc($PPS->{Name}));
     my $Data = $PPS->{Data};
@@ -242,12 +267,13 @@ sub AddressItem {
     # FILE Entries.
     elsif ($PPS->{Type}==2) {
 	if ($Name eq '__substg1 0_3001001E') {	# Real Name
-	    SetAddressPart($addresses, $entry, 'Name', $Data, $verbose);
+	    SetAddressPart($address, 'Name', $Data);
 	} elsif ($Name eq '__substg1 0_3003001E') {	# Address
-	    SetAddressPart($addresses, $entry, 'Address', $Data, $verbose);
+	    SetAddressPart($address, 'Address', $Data) if ($Data =~ /@/);
+	} elsif ($Name eq '__substg1 0_403E001E') {	# Address
+	    SetAddressPart($address, 'Address', $Data) if ($Data =~ /@/);
 	} else {
-	    CheckSkippableEntry($Name, $Data,
-		$skippable_entries->{ADD}, $verbose)
+	    CheckSkippableEntry($Name, $Data, "ADD")
 	}
     }
     else {
@@ -256,54 +282,52 @@ sub AddressItem {
 }
 
 sub SetAddressPart {
-    my $addresses = shift;
-    my $entry = shift;
-    my $part = shift;
+    my $address = shift;
+    my $partname = shift;
     my $data = shift;
-    my $verbose = shift;
 
-    if (defined ($addresses->{$entry}->{$part})) {
-	if ($addresses->{$entry}->{$part} eq $data) {
+    $data =~ s/\000//g;
+    #warn "Processing address data part $partname : $data\n";
+    if (defined ($address->{$partname})) {
+	if ($address->{$partname} eq $data) {
 	    warn "Skipping duplicate but identical address information for"
-		. " $entry/$part\n" if $verbose;
+	    . " $partname\n" if $verbose;
 	} else {
-	    warn "Address information $entry/$part inconsistent:\n";
-	    warn "    Original data: $addresses->{$entry}->{$part}\n";
+	    warn "Address information $partname inconsistent:\n";
+	    warn "    Original data: $address->{$partname}\n";
 	    warn "    New data: $data\n";
 	}
     } else {
-	$addresses->{$entry}->{$part} = $data;
+	$address->{$partname} = $data;
     }
 }
+
 #
 # Parse an Attachment type DIR entry.
 #
 sub ParseAttachment {
     my $PPS = shift;
     my $Mime = shift;
-    my $skippable_entries = shift;
-    my $verbose = shift;
 
     my $ent = $Mime->attach(
-	    Type => 'application/octet-stream',
-	    Encoding => 'base64',
-	    Data => []);
-    my $ent_info = {"shortname" => undef,
-		    "longname"  => undef };
+	Type => 'application/octet-stream',
+	Encoding => 'base64',
+	Data => []
+    );
+    my $ent_info = {
+	"shortname" => undef,
+	"longname"  => undef
+    };
     foreach my $Child (@{$PPS->{Child}}) {
-	AttachItem($Child, $ent, $ent_info, $skippable_entries,
-	    $verbose);
+	AttachItem($Child, $ent, $ent_info);
     }
     if (defined $ent_info->{"longname"}) {
-	$ent->head->mime_attr('content-type.name',
-	    $ent_info->{"longname"})
+	$ent->head->mime_attr('content-type.name', $ent_info->{"longname"})
     } elsif (defined $ent_info->{"shortname"}) {
-	$ent->head->mime_attr('content-type.name',
-	    $ent_info->{"shortname"});
+	$ent->head->mime_attr('content-type.name', $ent_info->{"shortname"});
     }
     if (defined $ent_info->{"mimetype"}) {
-	$ent->head->mime_attr('content-type',
-	    $ent_info->{"mimetype"});
+	$ent->head->mime_attr('content-type', $ent_info->{"mimetype"});
     }
 }
 
@@ -314,8 +338,6 @@ sub AttachItem {
     my $PPS = shift;
     my $ent = shift;
     my $ent_info = shift;
-    my $skippable_entries = shift;
-    my $verbose = shift;
 
     my $Name = NormalizeWhiteSpace(OLE::Storage_Lite::Ucs2Asc($PPS->{Name}));
     my $Data = $PPS->{Data};
@@ -344,8 +366,7 @@ sub AttachItem {
 	    $Data =~ s/\000//g;
 	    $ent_info->{"mimetype"} = $Data;
 	} else {
-	    CheckSkippableEntry($Name, $Data,
-		$skippable_entries->{ATT}, $verbose)
+	    CheckSkippableEntry($Name, $Data, "ATT");
 	}
     }
     else {
@@ -353,6 +374,28 @@ sub AttachItem {
     }
 }
 
+sub SaveBody {
+    my $Mime = shift;
+    my $Data = shift;
+    my $type = shift;
+
+    my $handle;
+    my $ent = $Mime->attach(
+	# Type => 'text/plain',
+	Type => $type,
+	# Encoding => 'quoted-printable',
+	Encoding => '8bit',
+	Data => []
+    );
+    $Data =~ s/\015//g;
+    $Data =~ s/\000//g;
+    if ($handle = $ent->open("w")) {
+	$handle->print($Data);
+	$handle->close;
+    } else {
+	warn "Could not write body data!";
+    }
+}
 #
 # Set a mime header, taking care of cleaning up the data.
 #
@@ -363,7 +406,34 @@ sub SetHeader {
 
     $Value =~ s/\000//g;
 
-    $Mime->head->replace($Item, $Value);
+    # $Mime->head->replace($Item, $Value);
+    $Mime->head->add($Item, $Value);
+}
+
+#
+# Add an email address to the mime header, given a structure:
+# {
+#   'Name' => "somename",
+#   'Address' => "someaddress@somewhere"
+# }
+#
+sub AddAddressHeader {
+    my $Mime = shift;
+    my $key = shift;
+    my $address = shift;
+
+    my $string = "$address->{Name}";
+    if (not exists $address->{Address}) {
+	$string .= "";
+    } elsif ($address->{Address} =~ /@/) {
+	$string .= " <$address->{Address}>";
+    } else {
+	$string .= " <no_valid_address>";
+    }
+    unless ($string eq "") {
+	$string =~ s/\000//g;
+	SetHeader($Mime, $key, $string);
+    }
 }
 
 #
@@ -386,6 +456,8 @@ sub FillHashes {
 	'__substg1 0_003B0102' => ["Sender address variant"],
 	'__substg1 0_003D001E' => ["Contains 'Re: '", "Re: "],
 	'__substg1 0_00410102' => ["Sender address variant"],
+	'__substg1 0_00460102' => ["Sender address variant"],
+	'__substg1 0_00530102' => ["Sender address variant"],
 	'__substg1 0_0064001E' => ["Sender address type", "SMTP"],
 	'__substg1 0_0070001E' => ["Subject w/o Re"],
 	'__substg1 0_00710102' => ["16 bytes: Unknown"],
@@ -394,6 +466,7 @@ sub FillHashes {
 	'__substg1 0_0C1E001E' => ["Reply address type", "SMTP"],
 	'__substg1 0_0E02001E' => ["1 byte: Unknown", ""],
 	'__substg1 0_0E1D001E' => ["Subject w/o Re"],
+	'__substg1 0_0E270102' => ["64 bytes: Unknown"],
 	'__substg1 0_1008001E' => ["Summary or something"],
 	'__substg1 0_10090102' => ["Binary data, may be largish"],
 	'__substg1 0_300B0102' => ["16 bytes: Unknown"],
@@ -404,12 +477,12 @@ sub FillHashes {
 	'__properties_version1 0' => ["Properties"],
     };
     $skippable_entries->{ADD} = {
-	'__properties_version1 0' => ["Properties"],
 	'__substg1 0_0FF60102' => ["Index"],
 	'__substg1 0_0FFF0102' => ["Address variant"],
 	'__substg1 0_3002001E' => ["Address Type", "SMTP"],
 	'__substg1 0_300B0102' => ["Address variant"],
 	'__substg1 0_3A20001E' => ["Address variant"],
+	'__properties_version1 0' => ["Properties"],
     };
     $skippable_entries->{ATT} = {
 	'__substg1 0_0FF90102' => ["Index"],
@@ -420,23 +493,27 @@ sub FillHashes {
 sub CheckSkippableEntry {
     my $name = shift;
     my $data = shift;
-    my $entries = shift;
-    my $verbose = shift;
+    my $subset = shift;
 
-    $data =~ s/\000//g;
+    my $entries = $skippable_entries->{$subset};
+
+    $data =~ s/\x00//g;
+    $data =~ s/[\x01-\x1F]/_/g;
+    $data =~ s/[\x7F-\xFF]/_/g;
 
     my $msg = "Skipping entry $name : ";
+    $msg .= substr($data,0,20);
     if (exists $entries->{$name}) {
 	my $entrydata = $entries->{$name};
-	$msg .= "$entrydata->[0]";
+	$msg .= " ($entrydata->[0]) ";
 	if (defined ($entrydata->[1])) {
 	    unless ($data eq $entrydata->[1]) {
-		$msg .= " [UNEXPECTED DATA]";
+		$msg .= " [UNEXPECTED VALUE]";
 	    }
 	}
 	warn "$msg\n" if $verbose;
     } else {
-	$msg .= "UNKNOWN";
+	$msg .= " (UNKNOWN) ";
 	warn "$msg\n";
     }
 }
@@ -454,7 +531,7 @@ msgconvert.pl - Convert Outlook .msg files to mbox format
 
 msgconvert.pl [options] <file.msg>
 
- Options:
+  Options:
     --verbose	be verbose
     --help	help message
 
