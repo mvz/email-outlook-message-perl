@@ -46,6 +46,7 @@
 #	    (Bug reported by Thomas Ng).
 #	    Don't produce multipart messages if not needed.
 #	    (Bug reported by Justin B. Scout).
+# 20040529  Correctly format OLEDATE.
 #
 
 #
@@ -56,7 +57,8 @@ use strict;
 use OLE::Storage_Lite;
 use MIME::Entity;
 use MIME::Parser;
-use POSIX qw(mktime ctime);
+use Date::Format;
+use POSIX qw(mktime);
 use constant DIR_TYPE => 1;
 use constant FILE_TYPE => 2;
 
@@ -68,6 +70,8 @@ our $skipproperties = {
   '001A' => "Type of message",
   '003B' => "Sender address variant",
   '003D' => "Contains 'Re: '",
+  '003F' => "'recieved by' id",
+  '0040' => "'recieved by' name",
   '0041' => "Sender variant address id",
   '0042' => "Sender variant name",
   '0046' => "Read receipt address id",
@@ -242,7 +246,9 @@ sub print {
     'someone@somewhere'
   );
   $string =~ s/\n//g;
-  print "From ", $string, " ", $self->{OLEDATE};
+  # TODO: Get the real date.
+  my $fromdate = $mime->head->get('Date');
+  print "From ", $string, " ", $fromdate;
   $mime->print(\*STDOUT);
   print "\n";
 }
@@ -308,6 +314,8 @@ sub _SubItem {
 	$data =~ s/\000//g;
 	if ($property eq '0037') {	# Subject
 	  $self->{SUBJECT} = $data;
+	} elsif ($property eq '0047') {	# Seems to contain the date
+	  $self->{SUBMISSION_ID} = $data;
 	} elsif ($property eq '007D') {	# Full headers
 	  $self->{HEAD} = $self->_ParseHead($data);
 	} elsif ($property eq '0C1A') {	# Reply-To: Name
@@ -341,6 +349,7 @@ sub _AddressDir {
   my $address = {
     NAME	=> undef,
     ADDRESS	=> undef,
+    TYPE	=> "",
   };
   foreach my $child (@{$PPS->{Child}}) {
     $self->_AddressItem($child, $address);
@@ -507,13 +516,9 @@ sub _GetOLEDate {
     $date = $PPS->{Time2nd};
     $date = $PPS->{Time1st} unless($date);
     if ($date) {
+      # TODO: This is a little convoluted.
       my $time = mktime(@$date);
-      my $datestring = sprintf(
-	"%02d.%02d.%4d %02d:%02d:%02d",
-	$date->[3], $date->[4]+1, $date->[5]+1900,
-	$date->[2], $date->[1],   $date->[0]
-      );
-      $self->{OLEDATE} = ctime($time);
+      $self->{OLEDATE} = time2str("%a, %d %h %Y %X %z", $time);
     }
   }
 }
