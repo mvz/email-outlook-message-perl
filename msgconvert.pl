@@ -147,6 +147,7 @@ sub RootItem {
 #
 # Parse Level one sub-entries of the Root Entry.
 # Thes can be DIR or FILE type entries.
+# DIR entries are parsed by subs defined below.
 #
 sub SubItem {
     my $PPS = shift;
@@ -442,6 +443,9 @@ sub NormalizeWhiteSpace {
     return $Name;
 }
 
+#
+# Subs to do with skippable entries.
+#
 sub FillHashes {
     my $skippable_entries = shift;
 
