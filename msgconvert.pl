@@ -39,8 +39,13 @@
 #	    - Creation of MIME::Entity object is delayed until the output
 #	      routines, which means all data is known; This means I can
 #	      create a multipart/alternative body.
-#	    - Item names are parsed, thanks to bfrederi@alumni.sfu.ca for
-#	      the information
+#	    - Item names are parsed (thanks to bfrederi@alumni.sfu.ca for
+#	      the information).
+# 20040514  Check if $self->{HEAD} actually exists before trying to add add
+#	    its contents to the output Mime object's header data.
+#	    (Bug reported by Thomas Ng).
+#	    Don't produce multipart messages if not needed.
+#	    (Bug reported by Justin B. Scout).
 #
 
 #
@@ -150,15 +155,69 @@ sub parse {
 sub print {
   my $self = shift;
 
-  my $mime = MIME::Entity->build(Type => "multipart/mixed");
   my $bodymime;
+  my $ismultipart = 0;
 
+  if ($self->{BODY_HTML} and $self->{BODY_PLAIN}) {
+    $ismultipart = 1;
+  }
+  if (@{$self->{ATTACHMENTS}}>0) {
+    $ismultipart = 1;
+  }
+  my $mime;
+
+  if ($ismultipart) {
+    $mime = MIME::Entity->build(Type => "multipart/mixed");
+
+    # Set the entity that we'll save the body parts to. If there's more than
+    # one part, it's a new entity, otherwise, it's the main $mime object.
+    if ($self->{BODY_HTML} and $self->{BODY_PLAIN}) {
+      $bodymime = MIME::Entity->build(
+	Type => "multipart/alternative",
+	Encoding => "8bit",
+      );
+      $mime->add_part($bodymime);
+    } else {
+      $bodymime = $mime;
+    }
+    if ($self->{BODY_PLAIN}) {
+      $self->_SaveAttachment($bodymime, {
+	MIMETYPE => 'text/plain; charset=ISO-8859-1',
+	ENCODING => '8bit',
+	DATA => $self->{BODY_PLAIN},
+	DISPOSITION => 'inline',
+      });
+    }
+    if ($self->{BODY_HTML}) {
+      $self->_SaveAttachment($bodymime, {
+	MIMETYPE => 'text/html',
+	ENCODING => '8bit',
+	DATA => $self->{BODY_HTML},
+	DISPOSITION => 'inline',
+      });
+    }
+    foreach my $att (@{$self->{ATTACHMENTS}}) {
+      $self->_SaveAttachment($mime, $att);
+    }
+  } elsif ($self->{BODY_PLAIN}) {
+    $mime = MIME::Entity->build(
+      Type => "text/plain",
+      Data => $self->{BODY_PLAIN}
+    );
+  } elsif ($self->{BODY_HTML}) {
+    $mime = MIME::Entity->build(
+      Type => "text/html",
+      Data => $self->{BODY_HTML}
+    );
+  }
   my $head = $self->{HEAD};
-  foreach my $tag ($head->tags) {
-    next if $skipheaders->{$tag};
-    my @values = $head->get_all($tag);
-    foreach my $value (@values) {
-      $mime->head->add($tag, $value);
+  if (defined $head) {
+    foreach my $tag ($head->tags) {
+      next if $skipheaders->{$tag};
+      my @values = $head->get_all($tag);
+      foreach my $value (@values) {
+	$mime->head->add($tag, $value);
+      }
     }
   }
 
@@ -171,36 +230,6 @@ sub print {
   $self->_AddHeaderField($mime, 'Cc', $self->{CC});
   $self->_AddHeaderField($mime, 'Message-Id', $self->{MESSAGEID});
 
-  # Set the entity that we'll save the body parts to. If there's more than
-  # one part, it's a new entity, otherwise, it's the main $mime object.
-  if ($self->{BODY_HTML} and $self->{BODY_PLAIN}) {
-    $bodymime = MIME::Entity->build(
-      Type => "multipart/alternative",
-      Encoding => "8bit",
-    );
-    $mime->add_part($bodymime);
-  } else {
-    $bodymime = $mime;
-  }
-  if ($self->{BODY_PLAIN}) {
-    $self->_SaveAttachment($bodymime, {
-      MIMETYPE => 'text/plain; charset=ISO-8859-1',
-      ENCODING => '8bit',
-      DATA => $self->{BODY_PLAIN},
-      DISPOSITION => 'inline',
-    });
-  }
-  if ($self->{BODY_HTML}) {
-    $self->_SaveAttachment($bodymime, {
-      MIMETYPE => 'text/html',
-      ENCODING => '8bit',
-      DATA => $self->{BODY_HTML},
-      DISPOSITION => 'inline',
-    });
-  }
-  foreach my $att (@{$self->{ATTACHMENTS}}) {
-    $self->_SaveAttachment($mime, $att);
-  }
   foreach my $address (@{$self->{ADDRESSES}}) {
     warn "Address ($address->{TYPE}): $address->{NAME} <$address->{ADDRESS}>\n";
   }
