@@ -54,6 +54,12 @@
 #	    - More unknown properties named.
 #	    - Found another property containing an SMTP address.
 #	    - Put non-SMTP type addresses back in output.
+# 20040825  Replace 'our' to declare globals with 'use vars'. This means
+#	    the globals our now properly scoped inside the package and not
+#	    the file.
+#	    This also fixes the bug that this program did not work on perl
+#	    versions below 5.6. (Bug reported by Tim Gustafson)
+# 20060218  More sensible encoding warnings.
 #
 
 #
@@ -69,10 +75,11 @@ use POSIX qw(mktime);
 use constant DIR_TYPE => 1;
 use constant FILE_TYPE => 2;
 
+use vars qw($skipproperties $skipheaders);
 #
 # Descriptions partially based on mapitags.h
 #
-our $skipproperties = {
+$skipproperties = {
   # Envelope properties
   '001A' => "Type of message",
   '003B' => "Sender address variant",
@@ -139,7 +146,7 @@ our $skipproperties = {
   '8002' => "Unknown, binary data",
 };
 
-our $skipheaders = {
+$skipheaders = {
   "MIME-Version" => 1,
   "Content-Type" => 1,
   "Content-Transfer-Encoding" => 1,
@@ -160,7 +167,8 @@ sub new {
   my $self = {
     ATTACHMENTS => [],
     ADDRESSES => [],
-    VERBOSE => 0
+    VERBOSE => 0,
+    HAS_UNICODE => 0
   };
   bless $self, $class;
 }
@@ -594,8 +602,12 @@ sub _ParseItemName {
 
   if ($name =~ /^__substg1 0_(....)(....)$/) {
     my ($property, $encoding) = ($1, $2);
-    if ($encoding eq '001F') {
-      warn "File contains Unicode fields. This is untested.\n";
+    if ($encoding eq '001F' and not ($self->{HAS_UNICODE})) {
+      warn "This MSG file contains Unicode fields." 
+	. " This is currently unsupported.\n";
+      $self->{HAS_UNICODE} = 1;
+    } elsif (not ($encoding eq '001E' or $encoding eq '0102')) {
+      warn "Unknown encoding $encoding. Results may be strange or wrong.\n";
     }
     return ($property, $encoding);
   } else {
