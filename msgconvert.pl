@@ -20,6 +20,12 @@
 # - Allow more than one file to be specified on the command line
 # - Allow an output file to be specified on the command line
 # - (Ongoing...) Make use of more of the items, if possible.
+# - Handle applefiles
+# - Handle nested MSG files
+#
+# TODO (Technical)
+# - Use some constants for property codes
+# - Refactor some of the if constructs?
 #
 # CHANGES:
 # 20020715  Recognize new items 'Cc', mime type of attachment, long
@@ -60,6 +66,7 @@
 #	    This also fixes the bug that this program did not work on perl
 #	    versions below 5.6. (Bug reported by Tim Gustafson)
 # 20060218  More sensible encoding warnings.
+# 20060219  Move OLE parsing to main program.
 #
 
 #
@@ -178,13 +185,7 @@ sub new {
 #
 sub parse {
   my $self = shift;
-  my $file = shift or die "Internal error: no file name";
-
-  # Load and parse MSG file (is OLE)
-  my $Msg = OLE::Storage_Lite->new($file);
-  my $PPS = $Msg->getPpsTree(1);
-  $PPS or die "$file must be an OLE file";
-
+  my $PPS = shift or die "Internal error: PPS tree";
   $self->_RootDir($PPS);
 }
 
@@ -738,10 +739,15 @@ my $file = $ARGV[0];
 defined $file or pod2usage(2);
 warn "Will parse file: $file\n" if $verbose; 
 
-# parse file
+# Load and parse MSG file (is OLE)
+my $Msg = OLE::Storage_Lite->new($file);
+my $PPS = $Msg->getPpsTree(1);
+$PPS or die "$file must be an OLE file";
+
+# parse PPS tree
 my $parser = new MSGParser();
 $parser->set_verbosity(1) if $verbose;
-$parser->parse($file);
+$parser->parse($PPS);
 $parser->print();
 
 #
