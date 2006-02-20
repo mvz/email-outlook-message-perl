@@ -355,9 +355,9 @@ sub _SubItemFile {
 
   # Next two bits are saved as a ref to the data
   if ($property eq '1000') {	# Body
-    $self->{BODY_PLAIN} = \($PPS->{Data});
+    $self->{BODY_PLAIN} = $PPS->{Data};
   } elsif ($property eq '1013') {	# HTML Version of body
-    $self->{BODY_HTML} = \($PPS->{Data});
+    $self->{BODY_HTML} = $PPS->{Data};
   } else {
     # Other bits are small enough to always store directly.
     my $data = $PPS->{Data};
@@ -477,7 +477,7 @@ sub _AttachmentItem {
       my $msgp = new MSGParser();
       $msgp->parse($PPS);
       my $data = $msgp->mime_object->as_string;
-      $att_info->{DATA} = \$data;
+      $att_info->{DATA} = $data;
       $att_info->{MIMETYPE} = 'message/rfc822';
       $att_info->{ENCODING} = '8bit';
     } else {
@@ -491,9 +491,8 @@ sub _AttachmentItem {
       return ;
     }
 
-    # File contents: store a reference to it.
     if ($property eq '3701') {
-      $att_info->{DATA} = \($PPS->{Data});
+      $att_info->{DATA} = $PPS->{Data};
       return;
     }
 
@@ -646,11 +645,6 @@ sub _SaveAttachment {
   my $mime = shift;
   my $att = shift;
 
-  #if ($att->{MIMETYPE} eq 'message/rfc822') {
-  #  $mime->add_part($att->{DATA});
-  #  return;
-  #}
-
   my $ent = $mime->attach(
     Type => $att->{MIMETYPE},
     Encoding => $att->{ENCODING},
@@ -661,7 +655,7 @@ sub _SaveAttachment {
 
   my $handle;
   if ($handle = $ent->open("w")) {
-    $handle->print(${$att->{DATA}});
+    $handle->print($att->{DATA});
     $handle->close;
   } else {
     warn "Could not write data!";
