@@ -206,18 +206,9 @@ sub mime_object {
   my $self = shift;
 
   my $bodymime;
-  my $ismultipart = 0;
-
-  # Find out if we need to conctruct a multipart message
-  if ($self->{BODY_HTML} and $self->{BODY_PLAIN}) {
-    $ismultipart = 1;
-  }
-  if (@{$self->{ATTACHMENTS}}>0) {
-    $ismultipart = 1;
-  }
   my $mime;
 
-  if ($ismultipart) {
+  if ($self->_IsMultiPart) {
     # Construct a multipart message object
 
     $mime = MIME::Entity->build(Type => "multipart/mixed");
@@ -266,35 +257,9 @@ sub mime_object {
     );
   }
 
-  # Copy original header data.
-  # Note: This should contain the Date: header.
-  my $head = $self->{HEAD};
-  if (defined $head) {
-    foreach my $tag ($head->tags) {
-      next if $skipheaders->{$tag};
-      my @values = $head->get_all($tag);
-      foreach my $value (@values) {
-	$mime->head->add($tag, $value);
-      }
-    }
-  }
+  $self->_CopyHeaderData($mime);
 
-  # Set header fields
-
-  # If we didn't get the date from the original header data, we may be able
-  # to get it from the SUBMISSION_ID:
-  $self->_AddHeaderField($mime, 'Date', $self->_SubmissionIdDate());
-
-  # Third and last chance to set the Date: header; this uses the date the
-  # MSG file was saved.
-  $self->_AddHeaderField($mime, 'Date', $self->{OLEDATE});
-  $self->_AddHeaderField($mime, 'Subject', $self->{SUBJECT});
-  $self->_AddHeaderField($mime, 'From', $self->_Address("FROM"));
-  #$self->_AddHeaderField($mime, 'Reply-To', $self->_Address("REPLYTO"));
-  $self->_AddHeaderField($mime, 'To', $self->_ExpandAddressList($self->{TO}));
-  $self->_AddHeaderField($mime, 'Cc', $self->_ExpandAddressList($self->{CC}));
-  $self->_AddHeaderField($mime, 'Message-Id', $self->{MESSAGEID});
-  $self->_AddHeaderField($mime, 'In-Reply-To', $self->{INREPLYTO});
+  $self->_SetHeaderFields($mime);
 
   return $mime;
 }
@@ -355,58 +320,71 @@ sub _SubItem {
   my $self = shift;
   my $PPS = shift;
   
-  my $name = $self->_GetName($PPS);
   # DIR Entries:
   if ($PPS->{Type} == DIR_TYPE) {
-    $self->_GetOLEDate($PPS);
-    if ($name =~ /__recip_version1 0_ /) { # Address of one recipient
-      $self->_AddressDir($PPS);
-    } elsif ($name =~ '__attach_version1 0_ ') { # Attachment
-      $self->_AttachmentDir($PPS);
-    } else {
-      $self->_UnknownDir($name);
-    }
+    $self->_SubItemDir($PPS);
   } elsif ($PPS->{Type} == FILE_TYPE) {
-    my ($property, $encoding) = $self->_ParseItemName($name);
-    if (defined $property) {
-      # Next two bits are saved as a ref to the data
-      if ($property eq '1000') {	# Body
-	$self->{BODY_PLAIN} = \($PPS->{Data});
-      } elsif ($property eq '1013') {	# HTML Version of body
-	$self->{BODY_HTML} = \($PPS->{Data});
-      } else {
-	# Other bits are small enough to always store directly.
-	my $data = $PPS->{Data};
-	$data =~ s/\000//g;
-	if ($property eq '0037') {	# Subject
-	  $self->{SUBJECT} = $data;
-	} elsif ($property eq '0047') {	# Seems to contain the date
-	  $self->{SUBMISSION_ID} = $data;
-	} elsif ($property eq '007D') {	# Full headers
-	  $self->{HEAD} = $self->_ParseHead($data);
-	} elsif ($property eq '0C1A') {	# Reply-To: Name
-	  $self->{FROM} = $data;
-	} elsif ($property eq '0C1E') {	# From: Address type
-	  $self->{FROM_ADDR_TYPE} = $data;
-	} elsif ($property eq '0C1F') {	# Reply-To: Address
-	  $self->{FROM_ADDR} = $data;
-	} elsif ($property eq '0E04') {	# To: Names
-	  $self->{TO} = $data;
-	} elsif ($property eq '0E03') {	# Cc: Names
-	  $self->{CC} = $data;
-	} elsif ($property eq '1035') {	# Message-Id
-	  $self->{MESSAGEID} = $data;
-	} elsif ($property eq '1042') {	# In reply to Message-Id
-	  $self->{INREPLYTO} = $data;
-	} else {
-	  $self->_UnknownFile($name);
-	}
-      }
+    $self->_SubItemFile($PPS);
+  } else {
+    warn "Unknown entry type: $PPS->{Type}";
+  }
+}
+
+sub _SubItemDir {
+  my ($self, $PPS) = @_;
+
+  $self->_GetOLEDate($PPS);
+
+  my $name = $self->_GetName($PPS);
+
+  if ($name =~ /__recip_version1 0_ /) { # Address of one recipient
+    $self->_AddressDir($PPS);
+  } elsif ($name =~ '__attach_version1 0_ ') { # Attachment
+    $self->_AttachmentDir($PPS);
+  } else {
+    $self->_UnknownDir($self->_GetName($PPS));
+  }
+}
+
+sub _SubItemFile {
+  my ($self, $PPS) = @_;
+
+  my $name = $self->_GetName($PPS);
+  my ($property, $encoding) = $self->_ParseItemName($name);
+  defined $property or return $self->_UnknownFile($name);
+
+  # Next two bits are saved as a ref to the data
+  if ($property eq '1000') {	# Body
+    $self->{BODY_PLAIN} = \($PPS->{Data});
+  } elsif ($property eq '1013') {	# HTML Version of body
+    $self->{BODY_HTML} = \($PPS->{Data});
+  } else {
+    # Other bits are small enough to always store directly.
+    my $data = $PPS->{Data};
+    $data =~ s/\000//g;
+    if ($property eq '0037') {	# Subject
+      $self->{SUBJECT} = $data;
+    } elsif ($property eq '0047') {	# Seems to contain the date
+      $self->{SUBMISSION_ID} = $data;
+    } elsif ($property eq '007D') {	# Full headers
+      $self->{HEAD} = $self->_ParseHead($data);
+    } elsif ($property eq '0C1A') {	# Reply-To: Name
+      $self->{FROM} = $data;
+    } elsif ($property eq '0C1E') {	# From: Address type
+      $self->{FROM_ADDR_TYPE} = $data;
+    } elsif ($property eq '0C1F') {	# Reply-To: Address
+      $self->{FROM_ADDR} = $data;
+    } elsif ($property eq '0E04') {	# To: Names
+      $self->{TO} = $data;
+    } elsif ($property eq '0E03') {	# Cc: Names
+      $self->{CC} = $data;
+    } elsif ($property eq '1035') {	# Message-Id
+      $self->{MESSAGEID} = $data;
+    } elsif ($property eq '1042') {	# In reply to Message-Id
+      $self->{INREPLYTO} = $data;
     } else {
       $self->_UnknownFile($name);
     }
-  } else {
-    warn "Unknown entry type: $PPS->{Type}";
   }
 }
 
@@ -519,23 +497,29 @@ sub _AttachmentItem {
       return;
     }
 
-    my $data = $PPS->{Data};
-    $data =~ s/\000//g;
-    if ($property eq '3704') {	# Short file name
-      $att_info->{SHORTNAME} = $data;
-    } elsif ($property eq '3707') {	# Long file name
-      $att_info->{LONGNAME} = $data;
-    } elsif ($property eq '370E') {	# mime type
-      $att_info->{MIMETYPE} = $data;
-    } elsif ($property eq '3716') {	# disposition
-      $att_info->{DISPOSITION} = $data;
-    } else {
-      $self->_UnknownFile($name);
-    }
+    my $map = {
+      '3704' => ["SHORTNAME",	1],	# Short file name
+      '3707' => ["LONGNAME",	1],	# Long file name
+      '370E' => ["MIMETYPE",	1],	# mime type
+      '3716' => ["DISPOSITION",	1],	# disposition
+    };
+    $self->_MapProperty($att_info, $PPS->{Data}, $property, $map)
+      or $self->_UnknownFile($name);
 
   } else {
     warn "Unknown entry type: $PPS->{Type}";
   }
+}
+
+sub _MapProperty {
+  my ($self, $hash, $data, $property, $map) = @_;
+
+  my $arr = $map->{$property} or return 0;
+
+  $arr->[1] and $data =~ s/\000//g;
+  $hash->{$arr->[0]} = $data;
+
+  return 1;
 }
 
 sub _UnknownDir {
@@ -767,6 +751,51 @@ sub _ParseHead {
   my $head = $entity->head;
   $head->unfold;
   return $head;
+}
+
+# Find out if we need to construct a multipart message
+sub _IsMultiPart {
+  my $self = shift;
+
+  return (
+    ($self->{BODY_HTML} and $self->{BODY_PLAIN})
+      or @{$self->{ATTACHMENTS}}>0
+  );
+}
+
+# Copy original header data.
+# Note: This should contain the Date: header.
+sub _CopyHeaderData {
+  my ($self, $mime) = @_;
+
+  my $head = $self->{HEAD};
+  defined $head or return;
+
+  foreach my $tag (grep {!$skipheaders->{$_}} $head->tags) {
+    foreach my $value ($head->get_all($tag)) {
+      $mime->head->add($tag, $value);
+    }
+  }
+}
+
+# Set header fields
+sub _SetHeaderFields {
+  my ($self, $mime) = @_;
+
+  # If we didn't get the date from the original header data, we may be able
+  # to get it from the SUBMISSION_ID:
+  $self->_AddHeaderField($mime, 'Date', $self->_SubmissionIdDate());
+
+  # Third and last chance to set the Date: header; this uses the date the
+  # MSG file was saved.
+  $self->_AddHeaderField($mime, 'Date', $self->{OLEDATE});
+  $self->_AddHeaderField($mime, 'Subject', $self->{SUBJECT});
+  $self->_AddHeaderField($mime, 'From', $self->_Address("FROM"));
+  #$self->_AddHeaderField($mime, 'Reply-To', $self->_Address("REPLYTO"));
+  $self->_AddHeaderField($mime, 'To', $self->_ExpandAddressList($self->{TO}));
+  $self->_AddHeaderField($mime, 'Cc', $self->_ExpandAddressList($self->{CC}));
+  $self->_AddHeaderField($mime, 'Message-Id', $self->{MESSAGEID});
+  $self->_AddHeaderField($mime, 'In-Reply-To', $self->{INREPLYTO});
 }
 
 package main;
