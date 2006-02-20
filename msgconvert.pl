@@ -175,6 +175,29 @@ use constant KNOWN_ENCODINGS => {
     '0102' => 'Binary',
 };
 
+use constant MAP_ATTACHMENT_FILE => {
+  '3701' => ["DATA",	    0], # Data
+  '3704' => ["SHORTNAME",   1], # Short file name
+  '3707' => ["LONGNAME",    1], # Long file name
+  '370E' => ["MIMETYPE",    1], # mime type
+  '3716' => ["DISPOSITION", 1], # disposition
+};
+
+use constant MAP_SUBITEM_FILE => {
+  '1000' => ["BODY_PLAIN",	0], # Body
+  '1013' => ["BODY_HTML",	0], # HTML Version of body
+  '0037' => ["SUBJECT",		1], # Subject
+  '0047' => ["SUBMISSION_ID",	1], # Seems to contain the date
+  '007D' => ["HEAD",		1], # Full headers
+  '0C1A' => ["FROM",		1], # Reply-To: Name
+  '0C1E' => ["FROM_ADDR_TYPE",	1], # From: Address type
+  '0C1F' => ["FROM_ADDR",	1], # Reply-To: Address
+  '0E04' => ["TO",		1], # To: Names
+  '0E03' => ["CC",		1], # Cc: Names
+  '1035' => ["MESSAGEID",	1], # Message-Id
+  '1042' => ["INREPLYTO",	1], # In reply to Message-Id
+};
+
 #
 # Main body of module
 #
@@ -308,9 +331,6 @@ sub _RootDir {
   my $self = shift;
   my $PPS = shift;
 
-  #$self->_GetName($PPS) eq "Root Entry"
-  #  or warn "Unexpected root entry name $name";
-
   foreach my $child (@{$PPS->{Child}}) {
     $self->_SubItem($child);
   }
@@ -351,41 +371,9 @@ sub _SubItemFile {
 
   my $name = $self->_GetName($PPS);
   my ($property, $encoding) = $self->_ParseItemName($name);
-  defined $property or return $self->_UnknownFile($name);
 
-  # Next two bits are saved as a ref to the data
-  if ($property eq '1000') {	# Body
-    $self->{BODY_PLAIN} = $PPS->{Data};
-  } elsif ($property eq '1013') {	# HTML Version of body
-    $self->{BODY_HTML} = $PPS->{Data};
-  } else {
-    # Other bits are small enough to always store directly.
-    my $data = $PPS->{Data};
-    $data =~ s/\000//g;
-    if ($property eq '0037') {	# Subject
-      $self->{SUBJECT} = $data;
-    } elsif ($property eq '0047') {	# Seems to contain the date
-      $self->{SUBMISSION_ID} = $data;
-    } elsif ($property eq '007D') {	# Full headers
-      $self->{HEAD} = $self->_ParseHead($data);
-    } elsif ($property eq '0C1A') {	# Reply-To: Name
-      $self->{FROM} = $data;
-    } elsif ($property eq '0C1E') {	# From: Address type
-      $self->{FROM_ADDR_TYPE} = $data;
-    } elsif ($property eq '0C1F') {	# Reply-To: Address
-      $self->{FROM_ADDR} = $data;
-    } elsif ($property eq '0E04') {	# To: Names
-      $self->{TO} = $data;
-    } elsif ($property eq '0E03') {	# Cc: Names
-      $self->{CC} = $data;
-    } elsif ($property eq '1035') {	# Message-Id
-      $self->{MESSAGEID} = $data;
-    } elsif ($property eq '1042') {	# In reply to Message-Id
-      $self->{INREPLYTO} = $data;
-    } else {
-      $self->_UnknownFile($name);
-    }
-  }
+  $self->_MapProperty($self, $PPS->{Data}, $property,
+    MAP_SUBITEM_FILE) or $self->_UnknownFile($name);
 }
 
 sub _AddressDir {
@@ -485,26 +473,8 @@ sub _AttachmentItem {
     }
 
   } elsif ($PPS->{Type} == FILE_TYPE) {
-
-    unless (defined $property) {
-      $self->_UnknownFile($name);
-      return ;
-    }
-
-    if ($property eq '3701') {
-      $att_info->{DATA} = $PPS->{Data};
-      return;
-    }
-
-    my $map = {
-      '3704' => ["SHORTNAME",	1],	# Short file name
-      '3707' => ["LONGNAME",	1],	# Long file name
-      '370E' => ["MIMETYPE",	1],	# mime type
-      '3716' => ["DISPOSITION",	1],	# disposition
-    };
-    $self->_MapProperty($att_info, $PPS->{Data}, $property, $map)
-      or $self->_UnknownFile($name);
-
+    $self->_MapProperty($att_info, $PPS->{Data}, $property,
+      MAP_ATTACHMENT_FILE) or $self->_UnknownFile($name);
   } else {
     warn "Unknown entry type: $PPS->{Type}";
   }
@@ -513,6 +483,7 @@ sub _AttachmentItem {
 sub _MapProperty {
   my ($self, $hash, $data, $property, $map) = @_;
 
+  defined $property or return 0;
   my $arr = $map->{$property} or return 0;
 
   $arr->[1] and $data =~ s/\000//g;
@@ -735,6 +706,7 @@ sub _ExpandAddressList {
 sub _ParseHead {
   my $self = shift;
   my $data = shift;
+  defined $data or return undef;
   # Parse full header date if we got that.
   my $parser = new MIME::Parser();
   $parser->output_to_core(1);
@@ -762,8 +734,7 @@ sub _IsMultiPart {
 sub _CopyHeaderData {
   my ($self, $mime) = @_;
 
-  my $head = $self->{HEAD};
-  defined $head or return;
+  my $head = $self->_ParseHead($self->{HEAD}) or return;
 
   foreach my $tag (grep {!$skipheaders->{$_}} $head->tags) {
     foreach my $value ($head->get_all($tag)) {
