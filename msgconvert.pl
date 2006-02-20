@@ -4,7 +4,7 @@
 #
 # Convert .MSG files (made by Outlook (Express)) to multipart MIME messages.
 #
-# Copyright 2002, 2004 Matijs van Zuijlen
+# Copyright 2002, 2004, 2006 Matijs van Zuijlen
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -21,7 +21,6 @@
 # - Allow an output file to be specified on the command line
 # - (Ongoing...) Make use of more of the items, if possible.
 # - Handle applefiles
-# - Handle nested MSG files
 #
 # TODO (Technical)
 # - Use some constants for property codes
@@ -48,8 +47,8 @@
 #	      create a multipart/alternative body.
 #	    - Item names are parsed (thanks to bfrederi@alumni.sfu.ca for
 #	      the information).
-# 20040514  Check if $self->{HEAD} actually exists before trying to add add
-#	    its contents to the output Mime object's header data.
+# 20040514  Check if $self->{HEAD} actually exists before trying to add its
+#	    contents to the output Mime object's header data.
 #	    (Bug reported by Thomas Ng).
 #	    Don't produce multipart messages if not needed.
 #	    (Bug reported by Justin B. Scout).
@@ -67,6 +66,7 @@
 #	    versions below 5.6. (Bug reported by Tim Gustafson)
 # 20060218  More sensible encoding warnings.
 # 20060219  Move OLE parsing to main program.
+#           Parse nested MSG files.
 #
 
 #
@@ -88,6 +88,7 @@ use vars qw($skipproperties $skipheaders);
 #
 $skipproperties = {
   # Envelope properties
+  '000B' => "Conversation key?",
   '001A' => "Type of message",
   '003B' => "Sender address variant",
   '003D' => "Contains 'Re: '",
@@ -109,12 +110,14 @@ $skipproperties = {
   '0076' => "'recieved by' email address",
   '0077' => "'recieved representing' address type",
   '0078' => "'recieved representing' email address",
+  '007F' => "something like a message id",
   # Recipient properties
   '0C19' => "Reply address variant",
   '0C1D' => "Reply address variant",
   '0C1E' => "Reply address type",
   # Non-transmittable properties
   '0E02' => "?Should BCC be displayed",
+  '0E0A' => "sent mail id",
   '0E1D' => "Subject w/o Re",
   '0E27' => "64 bytes: Unknown",
   '0FF6' => "Index",
@@ -131,15 +134,16 @@ $skipproperties = {
   '3702' => "Attachment encoding",
   '3703' => "Attachment extension",
   '3709' => "'Attachment rendering'", # Maybe an icon or something?
+  '3713' => "Icon URL?",
   # 'Mail user'
   '3A20' => "Address variant",
   # 3900 -- 39FF: 'Address book'
   '39FF' => "7 bit display name",
-  # 'Status object'
-  '3FF8' => "Routing data",
-  '3FF9' => "Routing data",
-  '3FFA' => "Routing data",
-  '3FFB' => "Routing data",
+  # 'Display table properties'
+  '3FF8' => "Routing data?",
+  '3FF9' => "Routing data?",
+  '3FFA' => "Routing data?",
+  '3FFB' => "Routing data?",
   # 'Transport-defined envelope property'
   '4029' => "Sender variant address type",
   '402A' => "Sender variant address",
@@ -163,6 +167,14 @@ $skipheaders = {
   "X-MS-Has-Attach" => 1,
 };
 
+use constant ENCODING_UNICODE => '001F';
+use constant KNOWN_ENCODINGS => {
+    '000D' => 'Directory',
+    '001F' => 'Unicode',
+    '001E' => 'Ascii?',
+    '0102' => 'Binary',
+};
+
 #
 # Main body of module
 #
@@ -175,7 +187,8 @@ sub new {
     ATTACHMENTS => [],
     ADDRESSES => [],
     VERBOSE => 0,
-    HAS_UNICODE => 0
+    HAS_UNICODE => 0,
+    FROM_ADDR_TYPE => "",
   };
   bless $self, $class;
 }
@@ -185,12 +198,11 @@ sub new {
 #
 sub parse {
   my $self = shift;
-  my $PPS = shift or die "Internal error: PPS tree";
+  my $PPS = shift or die "Internal error: No PPS tree";
   $self->_RootDir($PPS);
 }
 
-# Actually output the message in mbox format
-sub print {
+sub mime_object {
   my $self = shift;
 
   my $bodymime;
@@ -284,6 +296,15 @@ sub print {
   $self->_AddHeaderField($mime, 'Message-Id', $self->{MESSAGEID});
   $self->_AddHeaderField($mime, 'In-Reply-To', $self->{INREPLYTO});
 
+  return $mime;
+}
+
+# Actually output the message in mbox format
+sub print {
+  my $self = shift;
+
+  my $mime = $self->mime_object;
+
   # Construct From line from whatever we know.
   my $string = "";
   $string = (
@@ -322,9 +343,8 @@ sub _RootDir {
   my $self = shift;
   my $PPS = shift;
 
-  my $name = $self->_GetName($PPS);
-
-  $name eq "Root Entry" or warn "Unexpected root entry name $name";
+  #$self->_GetName($PPS) eq "Root Entry"
+  #  or warn "Unexpected root entry name $name";
 
   foreach my $child (@{$PPS->{Child}}) {
     $self->_SubItem($child);
@@ -471,32 +491,48 @@ sub _AttachmentItem {
 
   my $name = $self->_GetName($PPS);
 
+  my ($property, $encoding) = $self->_ParseItemName($name);
+
   if ($PPS->{Type} == DIR_TYPE) {
-    $self->_UnknownDir($name);
+
+    if ($property eq '3701') {	# Nested MSG file
+      my $msgp = new MSGParser();
+      $msgp->parse($PPS);
+      my $data = $msgp->mime_object->as_string;
+      $att_info->{DATA} = \$data;
+      $att_info->{MIMETYPE} = 'message/rfc822';
+      $att_info->{ENCODING} = '8bit';
+    } else {
+      $self->_UnknownDir($name);
+    }
+
   } elsif ($PPS->{Type} == FILE_TYPE) {
-    my ($property, $encoding) = $self->_ParseItemName($name);
-    if (defined $property) {
-      if ($property eq '3701') {	# File contents
-	# store a reference to it.
-	$att_info->{DATA} = \($PPS->{Data});
-      } else {
-	my $data = $PPS->{Data};
-	$data =~ s/\000//g;
-	if ($property eq '3704') {	# Short file name
-	  $att_info->{SHORTNAME} = $data;
-	} elsif ($property eq '3707') {	# Long file name
-	  $att_info->{LONGNAME} = $data;
-	} elsif ($property eq '370E') {	# mime type
-	  $att_info->{MIMETYPE} = $data;
-	} elsif ($property eq '3716') {	# disposition
-	  $att_info->{DISPOSITION} = $data;
-	} else {
-	  $self->_UnknownFile($name);
-	}
-      }
+
+    unless (defined $property) {
+      $self->_UnknownFile($name);
+      return ;
+    }
+
+    # File contents: store a reference to it.
+    if ($property eq '3701') {
+      $att_info->{DATA} = \($PPS->{Data});
+      return;
+    }
+
+    my $data = $PPS->{Data};
+    $data =~ s/\000//g;
+    if ($property eq '3704') {	# Short file name
+      $att_info->{SHORTNAME} = $data;
+    } elsif ($property eq '3707') {	# Long file name
+      $att_info->{LONGNAME} = $data;
+    } elsif ($property eq '370E') {	# mime type
+      $att_info->{MIMETYPE} = $data;
+    } elsif ($property eq '3716') {	# disposition
+      $att_info->{DISPOSITION} = $data;
     } else {
       $self->_UnknownFile($name);
     }
+
   } else {
     warn "Unknown entry type: $PPS->{Type}";
   }
@@ -524,17 +560,22 @@ sub _UnknownFile {
   }
 
   my ($property, $encoding) = $self->_ParseItemName($name);
-  if (defined $property) {
-    if ($skipproperties->{$property}) {
-      $self->{VERBOSE}
-	and warn "Skipping property $property ($skipproperties->{$property})\n";
-      return;
-    } else {
-      warn "Unknown property $property\n";
-      return;
-    }
+  unless (defined $property) {
+    warn "Unknown FILE entry $name\n";
+    return;
   }
-  warn "Unknown FILE entry $name\n";
+  if ($skipproperties->{$property}) {
+    $self->{VERBOSE}
+      and warn "Skipping property $property ($skipproperties->{$property})\n";
+    return;
+  } elsif ($property =~ /^80/) {
+    $self->{VERBOSE}
+      and warn "Skipping property $property (user-defined property)\n";
+    return;
+  } else {
+    warn "Unknown property $property\n";
+    return;
+  }
 }
 
 #
@@ -586,15 +627,15 @@ sub _FormatDate {
 sub _SubmissionIdDate {
   my $self = shift;
   my $submission_id = $self->{SUBMISSION_ID};
-  if (defined $submission_id) {
-    $submission_id =~ m/l=.*-(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)Z-.*/;
-    my $year = $1;
-    $year += 100 if $year < 20;
-    my $datestr = $self->_FormatDate([$6,$5,$4,$3,$2-1,$year]);
-    return $datestr;
-  } else {
-    return undef;
-  }
+
+  defined $submission_id or return undef;
+
+  $submission_id =~ m/l=.*-(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)Z-.*/
+    or return undef;
+
+  my $year = $1;
+  $year += 100 if $year < 20;
+  return $self->_FormatDate([$6,$5,$4,$3,$2-1,$year]);
 }
 
 sub _ParseItemName {
@@ -603,11 +644,11 @@ sub _ParseItemName {
 
   if ($name =~ /^__substg1 0_(....)(....)$/) {
     my ($property, $encoding) = ($1, $2);
-    if ($encoding eq '001F' and not ($self->{HAS_UNICODE})) {
+    if ($encoding eq ENCODING_UNICODE and not ($self->{HAS_UNICODE})) {
       warn "This MSG file contains Unicode fields." 
 	. " This is currently unsupported.\n";
       $self->{HAS_UNICODE} = 1;
-    } elsif (not ($encoding eq '001E' or $encoding eq '0102')) {
+    } elsif (not (KNOWN_ENCODINGS()->{$encoding})) {
       warn "Unknown encoding $encoding. Results may be strange or wrong.\n";
     }
     return ($property, $encoding);
@@ -621,7 +662,11 @@ sub _SaveAttachment {
   my $mime = shift;
   my $att = shift;
 
-  my $handle;
+  #if ($att->{MIMETYPE} eq 'message/rfc822') {
+  #  $mime->add_part($att->{DATA});
+  #  return;
+  #}
+
   my $ent = $mime->attach(
     Type => $att->{MIMETYPE},
     Encoding => $att->{ENCODING},
@@ -629,6 +674,8 @@ sub _SaveAttachment {
     Filename => ($att->{LONGNAME} ? $att->{LONGNAME} : $att->{SHORTNAME}),
     Disposition => $att->{DISPOSITION}
   );
+
+  my $handle;
   if ($handle = $ent->open("w")) {
     $handle->print(${$att->{DATA}});
     $handle->close;
@@ -675,11 +722,9 @@ sub _AddHeaderField {
 sub _Address {
   my $self = shift;
   my $tag = shift;
-  my $name = $self->{$tag};
-  my $address = $self->{$tag . "_ADDR"};
-  my $type = $self->{$tag . "_ADDR_TYPE"};
-  #return "$name" . ($type eq "SMTP" ? " <$address>" : " <>");
-  return "$name" . " <$address>";
+  my $name = $self->{$tag} || "";
+  my $address = $self->{$tag . "_ADDR"} || "";
+  return "$name <$address>";
 }
 
 # Find SMTP addresses for the given list of names
