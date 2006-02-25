@@ -57,6 +57,7 @@
 # 20060218  More sensible encoding warnings.
 # 20060219  Move OLE parsing to main program.
 #           Parse nested MSG files.
+# 20060225  Simplify code.
 #
 
 #
@@ -186,6 +187,15 @@ use constant MAP_SUBITEM_FILE => {
   '0E03' => ["CC",		1], # Cc: Names
   '1035' => ["MESSAGEID",	1], # Message-Id
   '1042' => ["INREPLYTO",	1], # In reply to Message-Id
+};
+
+use constant MAP_ADDRESSITEM_FILE => {
+  '3001' => ["NAME",		1], # Real name
+  '3002' => ["TYPE",		1], # Address type
+  '403D' => ["TYPE",		1], # Address type
+  '3003' => ["ADDRESS",		1], # Address
+  '403E' => ["ADDRESS",		1], # Address
+  '39FE' => ["SMTPADDRESS",	1], # SMTP Address variant
 };
 
 #
@@ -387,31 +397,9 @@ sub _AddressItem {
     $self->_UnknownDir($name);
   } elsif ($PPS->{Type} == FILE_TYPE) {
     my ($property, $encoding) = $self->_ParseItemName($name);
-    if (defined $property) {
-      my $data = $PPS->{Data};
-      $data =~ s/\000//g;
-      if ($property eq '3001') {	# Real Name
-	$addr_info->{NAME} = $data;
-      } elsif (
-	$property eq '3002' or
-	$property eq '403D'
-      ) {	# Address type
-	$addr_info->{TYPE} = $data;
-      } elsif (
-	$property eq '3003' or
-	$property eq '403E'
-      ) {	# Address
-	$addr_info->{ADDRESS} = $data;
-      } elsif ($property eq '39FE') {	# SMTP Address variant
-	$addr_info->{SMTPADDRESS} = $data;
-      } else {
-	$self->_UnknownFile($name);
-      }
-    } else {
-      $self->_UnknownFile($name);
-    }
-  }
-  else {
+    $self->_MapProperty($addr_info, $PPS->{Data}, $property,
+      MAP_ADDRESSITEM_FILE) or $self->_UnknownFile($name);
+  } else {
     warn "Unknown entry type: $PPS->{Type}";
   }
 }
@@ -665,7 +653,7 @@ sub _ExpandAddressList {
 }
 
 sub _ParseHead {
-  my ($self, $date) = @_;
+  my ($self, $data) = @_;
   defined $data or return undef;
   # Parse full header date if we got that.
   my $parser = new MIME::Parser();
