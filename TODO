@@ -11,4 +11,6 @@ TODO (Functional)
 TODO (Technical)
 - Use some constants for property codes
 - Refactor some of the if constructs?
+- Clean out Content-Type header from 'original header' field before feeding
+  to MIME::Tools.
 

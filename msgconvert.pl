@@ -56,8 +56,9 @@
 #	    versions below 5.6. (Bug reported by Tim Gustafson)
 # 20060218  More sensible encoding warnings.
 # 20060219  Move OLE parsing to main program.
-#           Parse nested MSG files.
+#           Parse nested MSG files (Bug reported by Christof Lukas).
 # 20060225  Simplify code.
+# 20060719  Keep MIME::Tools sedated.
 #
 
 #
@@ -66,10 +67,15 @@
 package MSGParser;
 use strict;
 use OLE::Storage_Lite;
+use MIME::Tools;
 use MIME::Entity;
 use MIME::Parser;
 use Date::Format;
 use POSIX qw(mktime);
+# Set up MIME::Tools so it will keep its mouth shut.
+MIME::Tools->debugging(0);
+MIME::Tools->quiet(1);
+
 use constant DIR_TYPE => 1;
 use constant FILE_TYPE => 2;
 
@@ -658,7 +664,6 @@ sub _ParseHead {
   # Parse full header date if we got that.
   my $parser = new MIME::Parser();
   $parser->output_to_core(1);
-  $parser->decode_headers(1);
   $data =~ s/^Microsoft Mail.*$/X-MSGConvert: yes/m;
   my $entity = $parser->parse_data($data)
     or warn "Couldn't parse full headers!"; 
