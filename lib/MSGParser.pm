@@ -227,24 +227,22 @@ sub mime_object {
 }
 
 # Actually output the message in mbox format
-sub print {
+sub as_mbox {
   my $self = shift;
 
-  my $mime = $self->mime_object;
-
   # Construct From line from whatever we know.
-  my $string = "";
-  $string = (
+  my $from = (
     $self->{FROM_ADDR_TYPE} eq "SMTP" ?
     $self->{FROM_ADDR} :
     'someone@somewhere'
   );
-  $string =~ s/\n//g;
+  $from =~ s/\n//g;
 
   # The date used here is not really important.
-  print "From ", $string, " ", scalar localtime, "\n";
-  $mime->print(\*STDOUT);
-  print "\n";
+  my $mbox = "From $from " . scalar localtime . "\n";
+  $mbox .= $self->mime_object->as_string;
+  $mbox .= "\n";
+  return $mbox;
 }
 
 sub set_verbosity {
@@ -308,8 +306,8 @@ sub _SubItemFile {
   my $name = $self->_GetName($PPS);
   my ($property, $encoding) = $self->_ParseItemName($name);
 
-  $self->_MapProperty($self, $PPS->{Data}, $property,
-    MAP_SUBITEM_FILE) or $self->_UnknownFile($name);
+  $self->_MapProperty($self, $PPS->{Data}, $property, MAP_SUBITEM_FILE)
+    or $self->_UnknownFile($name);
 }
 
 sub _AddressDir {
