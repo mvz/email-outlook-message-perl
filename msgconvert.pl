@@ -60,6 +60,7 @@
 # 20060225  Simplify code.
 # 20060719  Keep MIME::Tools sedated.
 #
+our $VERSION = "0.0.20060719";
 
 #
 # Import modules.
