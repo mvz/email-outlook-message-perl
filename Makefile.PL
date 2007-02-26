@@ -4,7 +4,7 @@ WriteMakefile(
   'NAME'	    => 'MSGConvert',
   'AUTHOR'	    => 'Matijs van Zuijlen',
   'VERSION_FROM'    => 'msgconvert.pl',
-  'EXE_FILES'	    => [ 'msgconvert.pl' ],
+  'EXE_FILES'	    => [ 'msgconvert.pl', 'oledump.pl' ],
   'PREREQ_PM'	=> {
     OLE::Storage_Lite => 0,
     MIME::Tools => 0,
