@@ -44,7 +44,7 @@ $PPS or die "$file must be an OLE file";
 my $parser = new MSGParser();
 $parser->set_verbosity(1) if $verbose;
 $parser->parse($PPS);
-$parser->print();
+print $parser->as_mbox();
 
 #
 # Usage info follows.
