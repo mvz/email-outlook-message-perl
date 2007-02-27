@@ -4,6 +4,7 @@ use MIME::Tools;
 use MIME::Entity;
 use MIME::Parser;
 use Date::Format;
+use OLE::Storage_Lite;
 use POSIX qw(mktime);
 # Set up MIME::Tools so it will keep its mouth shut.
 MIME::Tools->debugging(0);
@@ -143,6 +144,8 @@ use constant MAP_ADDRESSITEM_FILE => {
 
 sub new {
   my $that = shift;
+  my $file = shift or die "File name is required parameter";
+  my $verbose = shift;
   my $class = ref $that || $that;
 
   my $self = {
@@ -153,6 +156,15 @@ sub new {
     FROM_ADDR_TYPE => "",
   };
   bless $self, $class;
+
+  my $msg = OLE::Storage_Lite->new($file);
+  my $pps = $msg->getPpsTree(1);
+  $pps or die "Parsing $file as OLE file failed.";
+  $self->parse($pps);
+
+  $self->set_verbosity(1) if $verbose;
+
+  return $self;
 }
 
 #
@@ -160,8 +172,8 @@ sub new {
 #
 sub parse {
   my $self = shift;
-  my $PPS = shift or die "Internal error: No PPS tree";
-  $self->_RootDir($PPS);
+  my $pps = shift or die "Internal error: No PPS tree";
+  $self->_RootDir($pps);
 }
 
 sub mime_object {
@@ -239,7 +251,7 @@ sub as_mbox {
   $from =~ s/\n//g;
 
   # The date used here is not really important.
-  my $mbox = "From $from " . scalar localtime . "\n";
+  my $mbox = "From $from " . scalar localtime() . "\n";
   $mbox .= $self->mime_object->as_string;
   $mbox .= "\n";
   return $mbox;
@@ -265,84 +277,84 @@ sub set_verbosity {
 # several children. These children are parsed in the sub SubItem.
 # 
 sub _RootDir {
-  my ($self, $PPS) = @_;
+  my ($self, $pps) = @_;
 
-  foreach my $child (@{$PPS->{Child}}) {
+  foreach my $child (@{$pps->{Child}}) {
     $self->_SubItem($child);
   }
 }
 
 sub _SubItem {
-  my ($self, $PPS) = @_;
+  my ($self, $pps) = @_;
   
-  if ($PPS->{Type} == DIR_TYPE) {
-    $self->_SubItemDir($PPS);
-  } elsif ($PPS->{Type} == FILE_TYPE) {
-    $self->_SubItemFile($PPS);
+  if ($pps->{Type} == DIR_TYPE) {
+    $self->_SubItemDir($pps);
+  } elsif ($pps->{Type} == FILE_TYPE) {
+    $self->_SubItemFile($pps);
   } else {
-    warn "Unknown entry type: $PPS->{Type}";
+    warn "Unknown entry type: $pps->{Type}";
   }
 }
 
 sub _SubItemDir {
-  my ($self, $PPS) = @_;
+  my ($self, $pps) = @_;
 
-  $self->_GetOLEDate($PPS);
+  $self->_GetOLEDate($pps);
 
-  my $name = $self->_GetName($PPS);
+  my $name = $self->_GetName($pps);
 
   if ($name =~ /__recip_version1 0_ /) { # Address of one recipient
-    $self->_AddressDir($PPS);
+    $self->_AddressDir($pps);
   } elsif ($name =~ '__attach_version1 0_ ') { # Attachment
-    $self->_AttachmentDir($PPS);
+    $self->_AttachmentDir($pps);
   } else {
-    $self->_UnknownDir($self->_GetName($PPS));
+    $self->_UnknownDir($self->_GetName($pps));
   }
 }
 
 sub _SubItemFile {
-  my ($self, $PPS) = @_;
+  my ($self, $pps) = @_;
 
-  my $name = $self->_GetName($PPS);
+  my $name = $self->_GetName($pps);
   my ($property, $encoding) = $self->_ParseItemName($name);
 
-  $self->_MapProperty($self, $PPS->{Data}, $property, MAP_SUBITEM_FILE)
+  $self->_MapProperty($self, $pps->{Data}, $property, MAP_SUBITEM_FILE)
     or $self->_UnknownFile($name);
 }
 
 sub _AddressDir {
-  my ($self, $PPS) = @_;
+  my ($self, $pps) = @_;
 
   my $address = {
     NAME	=> undef,
     ADDRESS	=> undef,
     TYPE	=> "",
   };
-  foreach my $child (@{$PPS->{Child}}) {
+  foreach my $child (@{$pps->{Child}}) {
     $self->_AddressItem($child, $address);
   }
   push @{$self->{ADDRESSES}}, $address;
 }
 
 sub _AddressItem {
-  my ($self, $PPS, $addr_info) = @_;
+  my ($self, $pps, $addr_info) = @_;
 
-  my $name = $self->_GetName($PPS);
+  my $name = $self->_GetName($pps);
 
   # DIR Entries: There should be none.
-  if ($PPS->{Type} == DIR_TYPE) {
+  if ($pps->{Type} == DIR_TYPE) {
     $self->_UnknownDir($name);
-  } elsif ($PPS->{Type} == FILE_TYPE) {
+  } elsif ($pps->{Type} == FILE_TYPE) {
     my ($property, $encoding) = $self->_ParseItemName($name);
-    $self->_MapProperty($addr_info, $PPS->{Data}, $property,
+    $self->_MapProperty($addr_info, $pps->{Data}, $property,
       MAP_ADDRESSITEM_FILE) or $self->_UnknownFile($name);
   } else {
-    warn "Unknown entry type: $PPS->{Type}";
+    warn "Unknown entry type: $pps->{Type}";
   }
 }
 
 sub _AttachmentDir {
-  my ($self, $PPS) = @_;
+  my ($self, $pps) = @_;
 
   my $attachment = {
     SHORTNAME	=> undef,
@@ -352,24 +364,27 @@ sub _AttachmentDir {
     DISPOSITION	=> 'attachment',
     DATA	=> undef
   };
-  foreach my $child (@{$PPS->{Child}}) {
+  foreach my $child (@{$pps->{Child}}) {
     $self->_AttachmentItem($child, $attachment);
+  }
+  if ($attachment->{MIMETYPE} eq 'multipart/signed') {
+    $attachment->{ENCODING} = '8bit';
   }
   push @{$self->{ATTACHMENTS}}, $attachment;
 }
 
 sub _AttachmentItem {
-  my ($self, $PPS, $att_info) = @_;
+  my ($self, $pps, $att_info) = @_;
 
-  my $name = $self->_GetName($PPS);
+  my $name = $self->_GetName($pps);
 
   my ($property, $encoding) = $self->_ParseItemName($name);
 
-  if ($PPS->{Type} == DIR_TYPE) {
+  if ($pps->{Type} == DIR_TYPE) {
 
     if ($property eq '3701') {	# Nested MSG file
       my $msgp = new MSGParser();
-      $msgp->parse($PPS);
+      $msgp->parse($pps);
       my $data = $msgp->mime_object->as_string;
       $att_info->{DATA} = $data;
       $att_info->{MIMETYPE} = 'message/rfc822';
@@ -378,11 +393,11 @@ sub _AttachmentItem {
       $self->_UnknownDir($name);
     }
 
-  } elsif ($PPS->{Type} == FILE_TYPE) {
-    $self->_MapProperty($att_info, $PPS->{Data}, $property,
+  } elsif ($pps->{Type} == FILE_TYPE) {
+    $self->_MapProperty($att_info, $pps->{Data}, $property,
       MAP_ATTACHMENT_FILE) or $self->_UnknownFile($name);
   } else {
-    warn "Unknown entry type: $PPS->{Type}";
+    warn "Unknown entry type: $pps->{Type}";
   }
 }
 
@@ -442,8 +457,8 @@ sub _UnknownFile {
 #
 
 sub _GetName {
-  my ($self, $PPS) = @_;
-  return $self->_NormalizeWhiteSpace(OLE::Storage_Lite::Ucs2Asc($PPS->{Name}));
+  my ($self, $pps) = @_;
+  return $self->_NormalizeWhiteSpace(OLE::Storage_Lite::Ucs2Asc($pps->{Name}));
 }
 
 sub _NormalizeWhiteSpace {
@@ -453,12 +468,12 @@ sub _NormalizeWhiteSpace {
 }
 
 sub _GetOLEDate {
-  my ($self, $PPS) = @_;
+  my ($self, $pps) = @_;
   unless (defined ($self->{OLEDATE})) {
     # Make Date
     my $datearr;
-    $datearr = $PPS->{Time2nd};
-    $datearr = $PPS->{Time1st} unless($datearr);
+    $datearr = $pps->{Time2nd};
+    $datearr = $pps->{Time1st} unless($datearr);
     $self->{OLEDATE} = $self->_FormatDate($datearr) if $datearr;
   }
 }

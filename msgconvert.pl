@@ -4,7 +4,7 @@
 #
 # Convert .MSG files (made by Outlook (Express)) to multipart MIME messages.
 #
-# Copyright 2002, 2004, 2006 Matijs van Zuijlen
+# Copyright 2002, 2004, 2006, 2007 Matijs van Zuijlen
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -16,11 +16,9 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
 # Public License for more details.
 #
-# CHANGES:
 our $VERSION = "0.0.20060719";
 
 use MSGParser;
-use OLE::Storage_Lite;
 use Getopt::Long;
 use Pod::Usage;
 
@@ -35,15 +33,8 @@ my $file = $ARGV[0];
 defined $file or pod2usage(2);
 warn "Will parse file: $file\n" if $verbose; 
 
-# Load and parse MSG file (is OLE)
-my $Msg = OLE::Storage_Lite->new($file);
-my $PPS = $Msg->getPpsTree(1);
-$PPS or die "$file must be an OLE file";
-
 # parse PPS tree
-my $parser = new MSGParser();
-$parser->set_verbosity(1) if $verbose;
-$parser->parse($PPS);
+my $parser = new MSGParser $file, $verbose;
 print $parser->as_mbox();
 
 #
