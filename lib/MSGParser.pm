@@ -146,6 +146,21 @@ sub new {
   my $that = shift;
   my $file = shift or die "File name is required parameter";
   my $verbose = shift;
+
+  my $self = $that->_empty_new;
+
+  my $msg = OLE::Storage_Lite->new($file);
+  my $pps = $msg->getPpsTree(1);
+  $pps or die "Parsing $file as OLE file failed.";
+  $self->_parse($pps);
+
+  $self->set_verbosity(1) if $verbose;
+
+  return $self;
+}
+
+sub _empty_new {
+  my $that = shift;
   my $class = ref $that || $that;
 
   my $self = {
@@ -156,21 +171,13 @@ sub new {
     FROM_ADDR_TYPE => "",
   };
   bless $self, $class;
-
-  my $msg = OLE::Storage_Lite->new($file);
-  my $pps = $msg->getPpsTree(1);
-  $pps or die "Parsing $file as OLE file failed.";
-  $self->parse($pps);
-
-  $self->set_verbosity(1) if $verbose;
-
   return $self;
 }
 
 #
 # Main sub: parse the PPS tree, and return 
 #
-sub parse {
+sub _parse {
   my $self = shift;
   my $pps = shift or die "Internal error: No PPS tree";
   $self->_RootDir($pps);
@@ -383,8 +390,8 @@ sub _AttachmentItem {
   if ($pps->{Type} == DIR_TYPE) {
 
     if ($property eq '3701') {	# Nested MSG file
-      my $msgp = new MSGParser();
-      $msgp->parse($pps);
+      my $msgp = $self->_empty_new();
+      $msgp->_parse($pps);
       my $data = $msgp->mime_object->as_string;
       $att_info->{DATA} = $data;
       $att_info->{MIMETYPE} = 'message/rfc822';
