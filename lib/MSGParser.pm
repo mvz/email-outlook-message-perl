@@ -2,8 +2,9 @@ package MSGParser;
 use strict;
 use MIME::Tools;
 use MIME::Entity;
-#use MIME::Parser;
 use Email::Simple;
+use Email::Abstract;
+use Email::MIME::Creator;
 use Date::Format;
 use OLE::Storage_Lite;
 use POSIX qw(mktime);
@@ -228,17 +229,19 @@ sub mime_object {
     }
   } elsif ($self->{BODY_PLAIN}) {
     # Construct a single part message object with a plain text body
-    $mime = MIME::Entity->build(
-      Type => "text/plain",
-      Data => $self->{BODY_PLAIN}
+    $mime = Email::MIME->create(
+      attributes => { content_type => "text/plain"},
+      body => $self->{BODY_PLAIN}
     );
   } elsif ($self->{BODY_HTML}) {
     # Construct a single part message object with an HTML body
-    $mime = MIME::Entity->build(
-      Type => "text/html",
-      Data => $self->{BODY_HTML}
+    $mime = Email::MIME->create(
+      attributes => { content_type => "text/html"},
+      body => $self->{BODY_HTML}
     );
   }
+  # So I can build it anyway I like up there:
+  $mime = Email::Abstract->cast($mime, 'MIME::Entity');
 
   $self->_copy_header_data($mime);
 
