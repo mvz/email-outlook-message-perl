@@ -90,13 +90,14 @@ $skipproperties = {
 };
 
 $skipheaders = {
-  "MIME-Version" => 1,
-  "Content-Type" => 1,
-  "Content-Transfer-Encoding" => 1,
-  "X-Mailer" => 1,
-  "X-Msgconvert" => 1,
-  "X-MS-Tnef-Correlator" => 1,
-  "X-MS-Has-Attach" => 1,
+  map { uc($_) => 1 } 
+  "MIME-Version",
+  "Content-Type",
+  "Content-Transfer-Encoding",
+  "X-Mailer",
+  "X-Msgconvert",
+  "X-MS-Tnef-Correlator",
+  "X-MS-Has-Attach"
 };
 
 use constant ENCODING_UNICODE => '001F';
@@ -239,7 +240,7 @@ sub mime_object {
     );
   }
 
-  $self->_CopyHeaderData($mime);
+  $self->_copy_header_data($mime);
 
   $self->_SetHeaderFields($mime);
 
@@ -612,16 +613,6 @@ sub _ExpandAddressList {
   return join ", ", @result;
 }
 
-sub _parse_head {
-  my ($self, $data) = @_;
-  defined $data or return undef;
-
-  # TODO: Do we really need to do this? No!
-  #$data =~ s/^Microsoft Mail.*$/X-MSGConvert: yes/m;
-
-  return new Email::Simple($data);
-}
-
 # Find out if we need to construct a multipart message
 sub _IsMultiPart {
   my $self = shift;
@@ -634,12 +625,13 @@ sub _IsMultiPart {
 
 # Copy original header data.
 # Note: This should contain the Date: header.
-sub _CopyHeaderData {
+sub _copy_header_data {
   my ($self, $mime) = @_;
 
-  my $parsed = $self->_parse_head($self->{HEAD}) or return;
+  defined $self->{HEAD} or return;
+  my $parsed = new Email::Simple($self->{HEAD});
 
-  foreach my $tag (grep {!$skipheaders->{$_}} $parsed->header_names) {
+  foreach my $tag (grep { !$skipheaders->{uc $_}} $parsed->header_names) {
     foreach my $value ($parsed->header($tag)) {
       $mime->head->add($tag, $value);
     }
