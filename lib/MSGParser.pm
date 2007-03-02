@@ -152,9 +152,8 @@ sub new {
   my $msg = OLE::Storage_Lite->new($file);
   my $pps = $msg->getPpsTree(1);
   $pps or die "Parsing $file as OLE file failed.";
-  $self->_parse($pps);
-
   $self->set_verbosity(1) if $verbose;
+  $self->_parse($pps);
 
   return $self;
 }
@@ -183,7 +182,7 @@ sub _parse {
   $self->_RootDir($pps);
 }
 
-sub mime_object {
+sub _mime_object {
   my $self = shift;
 
   my $bodymime;
@@ -259,9 +258,14 @@ sub as_mbox {
 
   # The date used here is not really important.
   my $mbox = "From $from " . scalar localtime() . "\n";
-  $mbox .= $self->mime_object->as_string;
+  $mbox .= $self->as_string;
   $mbox .= "\n";
   return $mbox;
+}
+
+sub as_string {
+  my $self = shift;
+  return $self->_mime_object->as_string;
 }
 
 sub set_verbosity {
@@ -392,7 +396,7 @@ sub _AttachmentItem {
     if ($property eq '3701') {	# Nested MSG file
       my $msgp = $self->_empty_new();
       $msgp->_parse($pps);
-      my $data = $msgp->mime_object->as_string;
+      my $data = $msgp->as_string;
       $att_info->{DATA} = $data;
       $att_info->{MIMETYPE} = 'message/rfc822';
       $att_info->{ENCODING} = '8bit';
@@ -545,7 +549,7 @@ sub _SaveAttachment {
     $handle->print($att->{DATA});
     $handle->close;
   } else {
-    warn "Could not write data!";
+    die "Could not write data into attachment.";
   }
 }
 
