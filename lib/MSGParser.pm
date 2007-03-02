@@ -2,7 +2,8 @@ package MSGParser;
 use strict;
 use MIME::Tools;
 use MIME::Entity;
-use MIME::Parser;
+#use MIME::Parser;
+use Email::Simple;
 use Date::Format;
 use OLE::Storage_Lite;
 use POSIX qw(mktime);
@@ -611,18 +612,14 @@ sub _ExpandAddressList {
   return join ", ", @result;
 }
 
-sub _ParseHead {
+sub _parse_head {
   my ($self, $data) = @_;
   defined $data or return undef;
-  # Parse full header date if we got that.
-  my $parser = new MIME::Parser();
-  $parser->output_to_core(1);
-  $data =~ s/^Microsoft Mail.*$/X-MSGConvert: yes/m;
-  my $entity = $parser->parse_data($data)
-    or warn "Couldn't parse full headers!"; 
-  my $head = $entity->head;
-  $head->unfold;
-  return $head;
+
+  # TODO: Do we really need to do this? No!
+  #$data =~ s/^Microsoft Mail.*$/X-MSGConvert: yes/m;
+
+  return new Email::Simple($data);
 }
 
 # Find out if we need to construct a multipart message
@@ -640,10 +637,10 @@ sub _IsMultiPart {
 sub _CopyHeaderData {
   my ($self, $mime) = @_;
 
-  my $head = $self->_ParseHead($self->{HEAD}) or return;
+  my $parsed = $self->_parse_head($self->{HEAD}) or return;
 
-  foreach my $tag (grep {!$skipheaders->{$_}} $head->tags) {
-    foreach my $value ($head->get_all($tag)) {
+  foreach my $tag (grep {!$skipheaders->{$_}} $parsed->header_names) {
+    foreach my $value ($parsed->header($tag)) {
       $mime->head->add($tag, $value);
     }
   }
