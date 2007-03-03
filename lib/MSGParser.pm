@@ -539,18 +539,10 @@ sub _SaveAttachment {
   my $ent = $mime->attach(
     Type => $att->{MIMETYPE},
     Encoding => $att->{ENCODING},
-    Data => [],
+    Data => $att->{DATA},
     Filename => ($att->{LONGNAME} ? $att->{LONGNAME} : $att->{SHORTNAME}),
     Disposition => $att->{DISPOSITION}
   );
-
-  my $handle;
-  if ($handle = $ent->open("w")) {
-    $handle->print($att->{DATA});
-    $handle->close;
-  } else {
-    die "Could not write data into attachment.";
-  }
 }
 
 sub _SetAddressPart {
