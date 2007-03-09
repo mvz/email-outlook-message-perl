@@ -229,13 +229,20 @@ sub _mime_object {
   } elsif ($self->{BODY_PLAIN}) {
     # Construct a single part message object with a plain text body
     $mime = Email::MIME->create(
-      attributes => { content_type => "text/plain"},
+      attributes => {
+	content_type => "text/plain",
+	charset => "ISO-8859-1",
+	disposition => "inline",
+	encoding => "binary",
+      },
       body => $self->{BODY_PLAIN}
     );
   } elsif ($self->{BODY_HTML}) {
     # Construct a single part message object with an HTML body
     $mime = Email::MIME->create(
-      attributes => { content_type => "text/html"},
+      attributes => {
+	content_type => "text/html"
+      },
       body => $self->{BODY_HTML}
     );
   }
@@ -631,6 +638,7 @@ sub _copy_header_data {
   my $parsed = new Email::Simple($self->{HEAD});
 
   foreach my $tag (grep { !$skipheaders->{uc $_}} $parsed->header_names) {
+    $mime->head->delete($tag);
     foreach my $value ($parsed->header($tag)) {
       $mime->head->add($tag, $value);
     }
