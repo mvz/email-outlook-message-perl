@@ -5,6 +5,7 @@ use MIME::Entity;
 use Email::Simple;
 use Email::Abstract;
 use Email::MIME::Creator;
+use Email::MIME::ContentType;
 use Date::Format;
 use OLE::Storage_Lite;
 use POSIX qw(mktime);
@@ -118,8 +119,8 @@ use constant MAP_ATTACHMENT_FILE => {
 };
 
 use constant MAP_SUBITEM_FILE => {
-  '1000' => ["BODY_PLAIN",	0], # Body
-  '1013' => ["BODY_HTML",	0], # HTML Version of body
+  '1000' => ["BODY_PLAIN",	1], # Body
+  '1013' => ["BODY_HTML",	1], # HTML Version of body
   '0037' => ["SUBJECT",		1], # Subject
   '0047' => ["SUBMISSION_ID",	1], # Seems to contain the date
   '007D' => ["HEAD",		1], # Full headers
@@ -188,67 +189,68 @@ sub _parse {
 sub _mime_object {
   my $self = shift;
 
+  my ($plain, $html);
   my $bodymime;
   my $mime;
 
-  if ($self->_IsMultiPart) {
-    # Construct a multipart message object
-
-    $mime = MIME::Entity->build(Type => "multipart/mixed");
-
-    # Set the entity that we'll save the body parts to. If there's more than
-    # one part, it's a new entity, otherwise, it's the main $mime object.
-    if ($self->{BODY_HTML} and $self->{BODY_PLAIN}) {
-      $bodymime = MIME::Entity->build(
-	Type => "multipart/alternative",
-	Encoding => "8bit",
-      );
-      $mime->add_part($bodymime);
-    } else {
-      $bodymime = $mime;
-    }
-    if ($self->{BODY_PLAIN}) {
-      $self->_SaveAttachment($bodymime, {
-	MIMETYPE => 'text/plain; charset=ISO-8859-1',
-	ENCODING => '8bit',
-	DATA => $self->{BODY_PLAIN},
-	DISPOSITION => 'inline',
-      });
-    }
-    if ($self->{BODY_HTML}) {
-      $self->_SaveAttachment($bodymime, {
-	MIMETYPE => 'text/html',
-	ENCODING => '8bit',
-	DATA => $self->{BODY_HTML},
-	DISPOSITION => 'inline',
-      });
-    }
-    foreach my $att (@{$self->{ATTACHMENTS}}) {
-      $self->_SaveAttachment($mime, $att);
-    }
-  } elsif ($self->{BODY_PLAIN}) {
-    # Construct a single part message object with a plain text body
-    $mime = Email::MIME->create(
+  unless ($self->{BODY_HTML} or $self->{BODY_PLAIN}) {
+    $self->{BODY_PLAIN} = "";
+  }
+  if ($self->{BODY_PLAIN}) {
+    $plain = Email::MIME->create(
       attributes => {
 	content_type => "text/plain",
 	charset => "ISO-8859-1",
 	disposition => "inline",
-	encoding => "binary",
+	encoding => "8bit",
       },
       body => $self->{BODY_PLAIN}
     );
-  } elsif ($self->{BODY_HTML}) {
-    # Construct a single part message object with an HTML body
-    $mime = Email::MIME->create(
+  }
+  if ($self->{BODY_HTML}) {
+    $html = Email::MIME->create(
       attributes => {
 	content_type => "text/html"
       },
       body => $self->{BODY_HTML}
     );
   }
+
+  if ($html and $plain) {
+    $bodymime = Email::MIME->create(
+      attributes => {
+	content_type => "multipart/alternative",
+	encoding => "8bit",
+      },
+      parts => [$plain, $html]
+    );
+  } elsif ($html) {
+    $bodymime = $html;
+  } else {
+    $bodymime = $plain;
+  }
+
+  if (@{$self->{ATTACHMENTS}}>0) {
+    my $mult = Email::MIME->create(
+      attributes => {
+	content_type => "multipart/mixed",
+	encoding => "8bit",
+      },
+      parts => [$bodymime],
+    );
+    foreach my $att (@{$self->{ATTACHMENTS}}) {
+      $self->_SaveAttachment($mult, $att);
+    }
+    $mime = $mult;
+  } else {
+    $mime = $bodymime;
+  }
+
   # So I can build it anyway I like up there:
   $mime = Email::Abstract->cast($mime, 'MIME::Entity');
 
+  # Remove Date set automatically by Email::MIME->create
+  $mime->head->delete('Date');
   $self->_copy_header_data($mime);
 
   $self->_SetHeaderFields($mime);
@@ -430,7 +432,10 @@ sub _MapProperty {
   defined $property or return 0;
   my $arr = $map->{$property} or return 0;
 
-  $arr->[1] and $data =~ s/\000//g;
+  if ($arr->[1]) {
+    $data =~ s/\000//g;
+    $data =~ s/\r\n/\n/sg;
+  }
   $hash->{$arr->[0]} = $data;
 
   return 1;
@@ -548,13 +553,17 @@ sub _ParseItemName {
 sub _SaveAttachment {
   my ($self, $mime, $att) = @_;
 
-  my $ent = $mime->attach(
-    Type => $att->{MIMETYPE},
-    Encoding => $att->{ENCODING},
-    Data => $att->{DATA},
-    Filename => ($att->{LONGNAME} ? $att->{LONGNAME} : $att->{SHORTNAME}),
-    Disposition => $att->{DISPOSITION}
-  );
+  my $mt = parse_content_type($att->{MIMETYPE});
+  my $m = Email::MIME->create(
+    attributes => {
+      content_type => "$mt->{discrete}/$mt->{composite}",
+      %{$mt->{attributes}},
+      encoding => $att->{ENCODING},
+      name => ($att->{LONGNAME} ? $att->{LONGNAME} : $att->{SHORTNAME}),
+      disposition => $att->{DISPOSITION},
+    },
+    body => $att->{DATA});
+  $mime->parts_add([$m]);
 }
 
 sub _SetAddressPart {
