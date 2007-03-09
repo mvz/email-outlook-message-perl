@@ -4,11 +4,12 @@ use warnings;
 use Test::More tests => 3;
 use MSGParser;
 use MIME::Entity;
+use Email::MIME::Creator;
 
 my $p = MSGParser->_empty_new();
 ok($p, 'Checking internal new');
 
-my $mime = MIME::Entity->build(Data => "Hello!");
+my $mime = Email::MIME->create(body => "Hello!");
 $p->{HEAD} = <<HEADER;
 From: quux\@zonk
 MIME-Version: ignore
@@ -20,19 +21,13 @@ X-MS-TNEF-Correlator: ignore_case
 X-MS-Has-Attach: ignore
 HEADER
 my @expected_tags = qw{
+  Date
   From
-  Content-Type
-  Content-Disposition
-  Content-Transfer-Encoding
   MIME-Version
-  X-Mailer
   };
 $p->_copy_header_data($mime);
-my $head = $mime->head;
-my @new_tags = $head->tags;
+my @new_tags = $mime->header_names;
 
 is_deeply([sort @new_tags], [sort @expected_tags],
   'Are the right headers inserted?');
-isnt($head->get('MIME-Version'), 'ignore'); 
-
-
+isnt($mime->header('MIME-Version'), 'ignore'); 

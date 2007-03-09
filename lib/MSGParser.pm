@@ -1,7 +1,5 @@
 package MSGParser;
 use strict;
-use MIME::Tools;
-use MIME::Entity;
 use Email::Simple;
 use Email::Abstract;
 use Email::MIME::Creator;
@@ -9,9 +7,6 @@ use Email::MIME::ContentType;
 use Date::Format;
 use OLE::Storage_Lite;
 use POSIX qw(mktime);
-# Set up MIME::Tools so it will keep its mouth shut.
-MIME::Tools->debugging(0);
-MIME::Tools->quiet(1);
 
 use constant DIR_TYPE => 1;
 use constant FILE_TYPE => 2;
@@ -246,11 +241,7 @@ sub _mime_object {
     $mime = $bodymime;
   }
 
-  # So I can build it anyway I like up there:
-  $mime = Email::Abstract->cast($mime, 'MIME::Entity');
-
-  # Remove Date set automatically by Email::MIME->create
-  $mime->head->delete('Date');
+  $mime->header_set('Date', undef);
   $self->_copy_header_data($mime);
 
   $self->_SetHeaderFields($mime);
@@ -590,9 +581,9 @@ sub _SetAddressPart {
 sub _AddHeaderField {
   my ($self, $mime, $fieldname, $value) = @_;
 
-  my $oldvalue = $mime->head->get($fieldname);
+  my $oldvalue = $mime->header($fieldname);
   return if $oldvalue;
-  $mime->head->add($fieldname, $value) if $value;
+  $mime->header_set($fieldname, $value) if $value;
 }
 
 sub _Address {
@@ -647,10 +638,7 @@ sub _copy_header_data {
   my $parsed = new Email::Simple($self->{HEAD});
 
   foreach my $tag (grep { !$skipheaders->{uc $_}} $parsed->header_names) {
-    $mime->head->delete($tag);
-    foreach my $value ($parsed->header($tag)) {
-      $mime->head->add($tag, $value);
-    }
+    $mime->header_set($tag, $parsed->header($tag));
   }
 }
 
