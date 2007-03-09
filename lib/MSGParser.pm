@@ -23,6 +23,7 @@ $skipproperties = {
   '003D' => "Contains 'Re: '",
   '003F' => "'recieved by' id",
   '0040' => "'recieved by' name",
+  # TODO: These two fields are part of the Sender field.
   '0041' => "Sender variant address id",
   '0042' => "Sender variant name",
   '0043' => "'recieved representing' id",
@@ -31,6 +32,7 @@ $skipproperties = {
   '0051' => "'recieved by' search key",
   '0052' => "'recieved representing' search key",
   '0053' => "Read receipt search key",
+  # TODO: These two fields are part of the Sender field.
   '0064' => "Sender variant address type",
   '0065' => "Sender variant address",
   '0070' => "Conversation topic",
@@ -55,14 +57,19 @@ $skipproperties = {
   # Content properties
   '1008' => "Summary or something",
   '1009' => "RTF Compressed",
+  # --
+  '1046' => "From address variant",
   # 'Common property'
   '3001' => "Display name",
   '3002' => "Address Type",
   '300B' => "'Search key'",
+  # Message store info
+  '3414' => "Message Store Provider",
   # Attachment properties
   '3702' => "Attachment encoding",
   '3703' => "Attachment extension",
-  '3709' => "'Attachment rendering'", # Maybe an icon or something?
+  '3709' => "WMF with attachment rendering info", # Maybe an icon or something?
+  '370A' => "Tag identifying application that supplied the attachment",
   '3713' => "Icon URL?",
   # 'Mail user'
   '3A20' => "Address variant",
@@ -110,6 +117,7 @@ use constant MAP_ATTACHMENT_FILE => {
   '3704' => ["SHORTNAME",   1], # Short file name
   '3707' => ["LONGNAME",    1], # Long file name
   '370E' => ["MIMETYPE",    1], # mime type
+  '3712' => ["CONTENTID",   1], # content-id
   '3716' => ["DISPOSITION", 1], # disposition
 };
 
@@ -119,9 +127,9 @@ use constant MAP_SUBITEM_FILE => {
   '0037' => ["SUBJECT",		1], # Subject
   '0047' => ["SUBMISSION_ID",	1], # Seems to contain the date
   '007D' => ["HEAD",		1], # Full headers
-  '0C1A' => ["FROM",		1], # Reply-To: Name
+  '0C1A' => ["FROM",		1], # From: Name
   '0C1E' => ["FROM_ADDR_TYPE",	1], # From: Address type
-  '0C1F' => ["FROM_ADDR",	1], # Reply-To: Address
+  '0C1F' => ["FROM_ADDR",	1], # From: Address
   '0E04' => ["TO",		1], # To: Names
   '0E03' => ["CC",		1], # Cc: Names
   '1035' => ["MESSAGEID",	1], # Message-Id
@@ -231,9 +239,9 @@ sub _mime_object {
     $mime = $bodymime;
   }
 
-  $mime->header_set('Date', undef);
-  $self->_copy_header_data($mime);
+  #$mime->header_set('Date', undef);
   $self->_SetHeaderFields($mime);
+  $self->_copy_header_data($mime);
 
   return $mime;
 }
@@ -324,7 +332,7 @@ sub _SubItemFile {
   my ($property, $encoding) = $self->_ParseItemName($name);
 
   $self->_MapProperty($self, $pps->{Data}, $property, MAP_SUBITEM_FILE)
-    or $self->_UnknownFile($name);
+    or $self->_UnknownFile($name, $pps);
 }
 
 sub _AddressDir {
@@ -352,7 +360,7 @@ sub _AddressItem {
   } elsif ($pps->{Type} == FILE_TYPE) {
     my ($property, $encoding) = $self->_ParseItemName($name);
     $self->_MapProperty($addr_info, $pps->{Data}, $property,
-      MAP_ADDRESSITEM_FILE) or $self->_UnknownFile($name);
+      MAP_ADDRESSITEM_FILE) or $self->_UnknownFile($name, $pps);
   } else {
     warn "Unknown entry type: $pps->{Type}";
   }
@@ -367,7 +375,8 @@ sub _AttachmentDir {
     MIMETYPE	=> 'application/octet-stream',
     ENCODING	=> 'base64',
     DISPOSITION	=> 'attachment',
-    DATA	=> undef
+    CONTENTID	=> undef,
+    DATA	=> undef,
   };
   foreach my $child (@{$pps->{Child}}) {
     $self->_AttachmentItem($child, $attachment);
@@ -400,7 +409,7 @@ sub _AttachmentItem {
 
   } elsif ($pps->{Type} == FILE_TYPE) {
     $self->_MapProperty($att_info, $pps->{Data}, $property,
-      MAP_ATTACHMENT_FILE) or $self->_UnknownFile($name);
+      MAP_ATTACHMENT_FILE) or $self->_UnknownFile($name, $pps);
   } else {
     warn "Unknown entry type: $pps->{Type}";
   }
@@ -433,9 +442,10 @@ sub _UnknownDir {
 }
 
 sub _UnknownFile {
-  my ($self, $name) = @_;
+  my ($self, $name, $pps) = @_;
 
-  if ($name eq '__properties_version1 0') {
+  if ($name eq '__properties_version1 0'
+      or $name eq 'Olk10SideProps_0001') {
     $self->{VERBOSE}
       and warn "Skipping FILE entry $name (Properties)\n";
     return;
@@ -449,15 +459,27 @@ sub _UnknownFile {
   if ($skipproperties->{$property}) {
     $self->{VERBOSE}
       and warn "Skipping property $property ($skipproperties->{$property})\n";
-    return;
+  } elsif (not $self->_is_transmittable_property($property)) {
+    $self->{VERBOSE}
+      and warn "Skipping property $property (non-transmittable property)\n";
   } elsif ($property =~ /^80/) {
     $self->{VERBOSE}
       and warn "Skipping property $property (user-defined property)\n";
-    return;
+  } elsif ($pps->{Data} eq "") {
+    $self->{VERBOSE}
+      and warn "Unknown property $property (no data)\n";
   } else {
     warn "Unknown property $property\n";
-    return;
   }
+}
+
+sub _is_transmittable_property {
+  my ($self, $prop) = @_;
+  return 1 if $prop lt '0E00';
+  return 1 if $prop ge '1000' and $prop lt '6000';
+  return 1 if $prop ge '6800' and $prop lt '7C00';
+  return 1 if $prop ge '8000';
+  return 0;
 }
 
 #
@@ -543,6 +565,7 @@ sub _SaveAttachment {
       name => ($att->{LONGNAME} ? $att->{LONGNAME} : $att->{SHORTNAME}),
       disposition => $att->{DISPOSITION},
     },
+    header => [ 'Content-ID' => $att->{CONTENTID} ],
     body => $att->{DATA});
   $self->_clean_part_header($m);
   $mime->parts_add([$m]);
@@ -572,8 +595,8 @@ sub _SetAddressPart {
 sub _AddHeaderField {
   my ($self, $mime, $fieldname, $value) = @_;
 
-  my $oldvalue = $mime->header($fieldname);
-  return if $oldvalue;
+  #my $oldvalue = $mime->header($fieldname);
+  #return if $oldvalue;
   $mime->header_set($fieldname, $value) if $value;
 }
 
@@ -660,13 +683,6 @@ sub _copy_header_data {
 sub _SetHeaderFields {
   my ($self, $mime) = @_;
 
-  # If we didn't get the date from the original header data, we may be able
-  # to get it from the SUBMISSION_ID:
-  $self->_AddHeaderField($mime, 'Date', $self->_SubmissionIdDate());
-
-  # Third and last chance to set the Date: header; this uses the date the
-  # MSG file was saved.
-  $self->_AddHeaderField($mime, 'Date', $self->{OLEDATE});
   $self->_AddHeaderField($mime, 'Subject', $self->{SUBJECT});
   $self->_AddHeaderField($mime, 'From', $self->_Address("FROM"));
   #$self->_AddHeaderField($mime, 'Reply-To', $self->_Address("REPLYTO"));
@@ -674,5 +690,14 @@ sub _SetHeaderFields {
   $self->_AddHeaderField($mime, 'Cc', $self->_ExpandAddressList($self->{CC}));
   $self->_AddHeaderField($mime, 'Message-Id', $self->{MESSAGEID});
   $self->_AddHeaderField($mime, 'In-Reply-To', $self->{INREPLYTO});
+
+  # Least preferred option to set the Date: header; this uses the date the
+  # MSG file was saved.
+  $self->_AddHeaderField($mime, 'Date', $self->{OLEDATE});
+
+  # Second preferred option: get it from the SUBMISSION_ID:
+  $self->_AddHeaderField($mime, 'Date', $self->_SubmissionIdDate());
+
+  # After this, we'll try getting the date from the original headers.
 }
 
