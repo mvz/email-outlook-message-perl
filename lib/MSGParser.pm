@@ -192,26 +192,15 @@ sub _mime_object {
     $self->{BODY_PLAIN} = "";
   }
   if ($self->{BODY_PLAIN}) {
-    $plain = Email::MIME->create(
-      attributes => {
-	content_type => "text/plain",
-	charset => "ISO-8859-1",
-	disposition => "inline",
-	encoding => "8bit",
-      },
-      body => $self->{BODY_PLAIN}
-    );
+    $plain = $self->_create_mime_plain_body();
   }
   if ($self->{BODY_HTML}) {
-    $html = Email::MIME->create(
-      attributes => {
-	content_type => "text/html"
-      },
-      body => $self->{BODY_HTML}
-    );
+    $html = $self->_create_mime_html_body();
   }
 
   if ($html and $plain) {
+    $self->_clean_part_header($plain);
+    $self->_clean_part_header($html);
     $bodymime = Email::MIME->create(
       attributes => {
 	content_type => "multipart/alternative",
@@ -226,6 +215,7 @@ sub _mime_object {
   }
 
   if (@{$self->{ATTACHMENTS}}>0) {
+    $self->_clean_part_header($bodymime);
     my $mult = Email::MIME->create(
       attributes => {
 	content_type => "multipart/mixed",
@@ -243,7 +233,6 @@ sub _mime_object {
 
   $mime->header_set('Date', undef);
   $self->_copy_header_data($mime);
-
   $self->_SetHeaderFields($mime);
 
   return $mime;
@@ -550,10 +539,12 @@ sub _SaveAttachment {
       content_type => "$mt->{discrete}/$mt->{composite}",
       %{$mt->{attributes}},
       encoding => $att->{ENCODING},
+      filename => ($att->{LONGNAME} ? $att->{LONGNAME} : $att->{SHORTNAME}),
       name => ($att->{LONGNAME} ? $att->{LONGNAME} : $att->{SHORTNAME}),
       disposition => $att->{DISPOSITION},
     },
     body => $att->{DATA});
+  $self->_clean_part_header($m);
   $mime->parts_add([$m]);
 }
 
@@ -619,16 +610,39 @@ sub _ExpandAddressList {
   return join ", ", @result;
 }
 
-# Find out if we need to construct a multipart message
-sub _IsMultiPart {
-  my $self = shift;
+# TODO: Don't really want to need this!
+sub _clean_part_header {
+  my ($self, $part) = @_;
+  $part->header_set('Date', undef);
+  unless ($part->content_type =~ /^multipart\//) {
+    $part->header_set('MIME-Version', undef)
+  };
+}
 
-  return (
-    ($self->{BODY_HTML} and $self->{BODY_PLAIN})
-      or @{$self->{ATTACHMENTS}}>0
+sub _create_mime_plain_body {
+  my $self = shift;
+  return Email::MIME->create(
+    attributes => {
+      content_type => "text/plain",
+      charset => "ISO-8859-1",
+      disposition => "inline",
+      encoding => "8bit",
+    },
+    body => $self->{BODY_PLAIN}
   );
 }
 
+sub _create_mime_html_body {
+  my $self = shift;
+  return Email::MIME->create(
+    attributes => {
+      content_type => "text/html",
+      disposition => "inline",
+      encoding => "8bit",
+    },
+    body => $self->{BODY_HTML}
+  );
+}
 # Copy original header data.
 # Note: This should contain the Date: header.
 sub _copy_header_data {
