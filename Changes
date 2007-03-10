@@ -1,44 +1,91 @@
-20020715  Recognize new items 'Cc', mime type of attachment, long
-          filename of attachment, and full headers. Attachments turn out
-          to be numbered, so a regexp is now used to recognize label of
-          items that are attachments.
-20020831  long file name will definitely be used if present. Full headers
-          and mime type information are used when present. Created
-          generic system for specifying known items to be skipped.
-          Unexpected contents is never reason to bail out anymore. Added
-          support for usage message and option processing (--verbose).
-20040104  Handle address data slightly better, make From line less fake,
-          make $verbose and $skippable_entries global vars, handle HTML
-          variant of body text if present (though not optimally).
-20040214  Fix typos and incorrect comments.
-20040307  - Complete rewrite: All functional parts are now in the package
-            MSGParser;
-          - Creation of MIME::Entity object is delayed until the output
-            routines, which means all data is known; This means I can
-            create a multipart/alternative body.
-          - Item names are parsed (thanks to bfrederi@alumni.sfu.ca for
-            the information).
-20040514  Check if $self->{HEAD} actually exists before trying to add its
-          contents to the output Mime object's header data.
-          (Bug reported by Thomas Ng).
-          Don't produce multipart messages if not needed.
-          (Bug reported by Justin B. Scout).
-20040529  Correctly format OLEDATE.
-20040530  - Extract date from property 0047 (thanks, Marc Goodman).
-          - Use address data to make To: and Cc: lines complete
-          - Use the in-reply-to property
-          - More unknown properties named.
-          - Found another property containing an SMTP address.
-          - Put non-SMTP type addresses back in output.
-20040825  Replace 'our' to declare globals with 'use vars'. This means
-          the globals our now properly scoped inside the package and not
-          the file.
-          This also fixes the bug that this program did not work on perl
-          versions below 5.6. (Bug reported by Tim Gustafson)
-20060218  More sensible encoding warnings.
-20060219  Move OLE parsing to main program.
-          Parse nested MSG files (Bug reported by Christof Lukas).
-20060225  Simplify code.
-20060719  Keep MIME::Tools sedated.
+0.20070309  2007-03-09
 
+  - Use Email::* instead of MIME::Tools for message building and header
+    processing.
+  - Don't crash on multipart/signed email.
+  - Move main functionality (converting .MSG file into rfc882) into
+    separate file.
+  - Add auxilliary files to allow this to be an installable module
+    (Makefile.PL, etc).
 
+0.20060719  2006-07-19
+
+  - Keep MIME::Tools sedated.
+
+0.20060225  2006-02-25
+
+  - Simplify code.
+
+0.20060219  2006-02-19
+
+  - Move OLE parsing to main program.
+  - Parse nested MSG files (Bug reported by Christof Lukas).
+
+0.20060218  2006-02-18
+
+  - More sensible encoding warnings.
+
+0.20040825  2004-08-25
+
+  - Replace 'our' to declare globals with 'use vars'. This means the
+    globals our now properly scoped inside the package and not the file.
+    This also fixes the bug that this program did not work on perl versions
+    below 5.6. (Bug reported by Tim Gustafson)
+
+0.20040530  2004-05-30
+
+  - Extract date from property 0047 (thanks, Marc Goodman).
+  - Use address data to make To: and Cc: lines complete
+  - Use the in-reply-to property
+  - More unknown properties named.
+  - Found another property containing an SMTP address.
+  - Put non-SMTP type addresses back in output.
+
+0.20040529  2004-05-29
+
+  - Correctly format OLEDATE.
+
+0.20040514  2004-05-14
+
+  - Check if $self->{HEAD} actually exists before trying to add its
+    contents to the output Mime object's header data.
+    (Bug reported by Thomas Ng).
+  - Don't produce multipart messages if not needed.
+    (Bug reported by Justin B. Scout).
+
+0.20040307  2004-03-07
+
+  - Complete rewrite: All functional parts are now in the package
+    MSGParser;
+  - Creation of MIME::Entity object is delayed until the output routines,
+    which means all data is known; This means I can create a
+    multipart/alternative body.
+  - Item names are parsed (thanks to bfrederi@alumni.sfu.ca for the
+    information).
+
+0.20040214  2004-02-14
+
+  - Fix typos and incorrect comments.
+
+0.20040104  2004-01-04
+
+  - Handle address data slightly better
+  - make From line less fake
+  - make $verbose and $skippable_entries global vars
+  - handle HTML variant of body text if present (though not optimally).
+
+0.20020831  2002-08-31
+
+  - long file name will definitely be used if present.
+  - Full headers and mime type information are used when present.
+  - Created generic system for specifying known items to be skipped.
+  - Unexpected contents is never reason to bail out anymore.
+  - Added support for usage message and option processing (--verbose).
+
+0.20020715  2002-07-15
+
+  - Recognize new items 'Cc', mime type of attachment, long filename of
+    attachment, and full headers.
+  - Attachments turn out to be numbered, so a regexp is now used to
+    recognize label of items that are attachments.
+  - Oldest recorded version :-).

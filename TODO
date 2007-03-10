@@ -1,6 +1,7 @@
 TODO (Bugs)
 - Solve bug report concerning word file.
 - Process applefiles (using Mac::AppleSingleDouble??)
+- Process gpg-signed mail properly.
 
 TODO (Functional)
 - Do s/t useful with UTF-16 encoded text.
@@ -9,12 +10,11 @@ TODO (Functional)
 - (Ongoing...) Make use of more of the items, if possible.
 
 TODO (Technical)
-- Use Email::MIME::Creator to build message, instead of MIME::Tools.
 - Use Email::LocalDelivery::MailBox to write output
 - Use some constants for property codes
 - Refactor some of the if constructs?
-- Clean out Content-Type header from 'original header' field before feeding
-  to MIME::Tools.
+- Read all properties first, then use them when needed? (This is a major
+  change).
 
 TODO (Other)
 - Create neutral test files
