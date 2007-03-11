@@ -438,7 +438,7 @@ sub _process_pps_file_entry {
   my ($property, $encoding) = $self->_parse_item_name($name);
 
   $self->_MapProperty($target, $pps->{Data}, $property, $map)
-    or $self->_UnknownFile($name, $pps);
+    or $self->_warn_about_unknown_file($pps);
 }
 
 sub _MapProperty {
@@ -447,8 +447,9 @@ sub _MapProperty {
   defined $property or return 0;
   my $arr = $map->{$property} or return 0;
 
+  # FIXME: This probably messes up unicode processing.
   if ($arr->[1]) {
-    $data =~ s/\000//g;
+    $data =~ s/\000$//sg;
     $data =~ s/\r\n/\n/sg;
   }
   $hash->{$arr->[0]} = $data;
@@ -468,8 +469,10 @@ sub _warn_about_unknown_directory {
   warn "Unknown DIR entry $name\n";
 }
 
-sub _UnknownFile {
-  my ($self, $name, $pps) = @_;
+sub _warn_about_unknown_file {
+  my ($self, $pps) = @_;
+
+  my $name = $self->_get_pps_name($pps);
 
   if ($name eq '__properties_version1 0'
       or $name eq 'Olk10SideProps_0001') {
@@ -478,6 +481,7 @@ sub _UnknownFile {
     return;
   }
 
+  # FIXME: encoding not used.
   my ($property, $encoding) = $self->_parse_item_name($name);
   unless (defined $property) {
     warn "Unknown FILE entry $name\n";
