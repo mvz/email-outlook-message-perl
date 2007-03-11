@@ -343,7 +343,7 @@ sub _SubItem {
   if ($pps->{Type} == DIR_TYPE) {
     $self->_SubItemDir($pps);
   } elsif ($pps->{Type} == FILE_TYPE) {
-    $self->_SubItemFile($pps);
+    $self->_process_pps_file_entry($pps, $self, MAP_SUBITEM_FILE);
   } else {
     warn "Unknown entry type: $pps->{Type}";
   }
@@ -375,11 +375,6 @@ sub _process_pps_file_entry {
     or $self->_UnknownFile($name, $pps);
 }
 
-sub _SubItemFile {
-  my ($self, $pps) = @_;
-  $self->_process_pps_file_entry($pps, $self, MAP_SUBITEM_FILE);
-}
-
 sub _AddressDir {
   my ($self, $pps) = @_;
 
@@ -403,9 +398,7 @@ sub _AddressItem {
   if ($pps->{Type} == DIR_TYPE) {
     $self->_UnknownDir($name);
   } elsif ($pps->{Type} == FILE_TYPE) {
-    my ($property, $encoding) = $self->_parse_item_name($name);
-    $self->_MapProperty($addr_info, $pps->{Data}, $property,
-      MAP_ADDRESSITEM_FILE) or $self->_UnknownFile($name, $pps);
+    $self->_process_pps_file_entry($pps, $addr_info, MAP_ADDRESSITEM_FILE);
   } else {
     warn "Unknown entry type: $pps->{Type}";
   }
