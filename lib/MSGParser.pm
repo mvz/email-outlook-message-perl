@@ -205,7 +205,7 @@ sub new {
   my $pps = $msg->getPpsTree(1);
   $pps or die "Parsing $file as OLE file failed.";
   $self->_set_verbosity(1) if $verbose;
-  $self->_parse($pps);
+  $self->_process_root_dir($pps);
 
   return $self;
 }
@@ -214,24 +214,10 @@ sub _empty_new {
   my $that = shift;
   my $class = ref $that || $that;
 
-  my $self = {
-    ATTACHMENTS => [],
-    ADDRESSES => [],
-    VERBOSE => 0,
-    HAS_UNICODE => 0,
-    FROM_ADDR_TYPE => "",
-  };
-  bless $self, $class;
-  return $self;
-}
-
-#
-# Main sub: parse the PPS tree, and return 
-#
-sub _parse {
-  my $self = shift;
-  my $pps = shift or die "Internal error: No PPS tree";
-  $self->_RootDir($pps);
+  return bless {
+    ADDRESSES => [], ATTACHMENTS => [], FROM_ADDR_TYPE => "",
+    HAS_UNICODE => 0, VERBOSE => 0,
+  }, $class;
 }
 
 sub _mime_object {
@@ -322,19 +308,19 @@ sub _set_verbosity {
 }
 
 #
-# Below are functions that walk the PPS tree. The *Dir functions handle
+# Below are functions that walk the PPS tree. The *_dir functions handle
 # processing the directory nodes of the tree (mainly, iterating over the
 # children), whereas the *Item functions handle processing the items in the
 # directory (if such an item is itself a directory, it will in turn be
-# processed by the relevant *Dir function).
+# processed by the relevant *_dir function).
 #
 
 #
-# RootDir: Check Root Entry, parse sub-entries.
+# _process_root_dir: Check Root Entry, parse sub-entries.
 # The OLE file consists of a single entry called Root Entry, which has
 # several children. These children are parsed in the sub SubItem.
 # 
-sub _RootDir {
+sub _process_root_dir {
   my ($self, $pps) = @_;
 
   foreach my $child (@{$pps->{Child}}) {
@@ -444,9 +430,9 @@ sub _AttachmentItem {
     if ($property eq '3701') {	# Nested MSG file
       my $msgp = $self->_empty_new();
       $msgp->_set_verbosity($self->{VERBOSE});
-      $msgp->_parse($pps);
-      my $data = $msgp->as_string;
-      $att_info->{DATA} = $data;
+      $msgp->_process_root_dir($pps);
+
+      $att_info->{DATA} = $msgp->as_string;
       $att_info->{MIMETYPE} = 'message/rfc822';
       $att_info->{ENCODING} = '8bit';
     } else {
@@ -519,6 +505,10 @@ sub _UnknownFile {
   }
 }
 
+#
+# Helper functions
+#
+
 sub _is_transmittable_property {
   my ($self, $prop) = @_;
   return 1 if $prop lt '0E00';
@@ -527,10 +517,6 @@ sub _is_transmittable_property {
   return 1 if $prop ge '8000';
   return 0;
 }
-
-#
-# Helper functions
-#
 
 sub _GetName {
   my ($self, $pps) = @_;
