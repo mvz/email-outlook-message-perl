@@ -16,7 +16,6 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
 # Public License for more details.
 #
-our $VERSION = "0.0.20060719";
 
 use MSGParser;
 use Getopt::Long;

@@ -1,5 +1,48 @@
 package MSGParser;
+=head1 NAME
+
+MSGParser.pm - Convert Outlook .msg files to standard MIME.
+
+=head1 SYNOPSIS
+
+  use MSGParser;
+
+  my $mp = new MSGParser $msg $verbose;
+  print $mp->as_string;
+  print $mp->as_mbox;
+  # TODO: as_email_mime ??
+
+=head1 DESCRIPTION
+
+Parses .MSG files as produced by Microsoft Outlook.
+
+=head1 METHODS
+
+=over 8
+
+=item B<new($msg, $verbose)>
+
+    Parse the file pointed at by $msg. Set $verbose to a true value to
+    print information about skipped parts of the .msg file on STDERR.
+
+=item B<as_string>
+
+    Output result as a string representing a MIME-encoded email.
+
+=item B<as_mbox>
+
+    Output result as a string representing an mbox file containing a single
+    email (deprecated).
+
+=head1 BUGS
+
+Not all data that's in the .MSG file is converted. There simply are some
+parts whose meaning escapes me. Formatting of text messages will also be
+lost. YMMV.
+
+=cut
 use strict;
+use warnings;
 use Email::Simple;
 use Email::Abstract;
 use Email::MIME::Creator;
@@ -7,11 +50,13 @@ use Email::MIME::ContentType;
 use Date::Format;
 use OLE::Storage_Lite;
 use POSIX qw(mktime);
+use Carp;
 
 use constant DIR_TYPE => 1;
 use constant FILE_TYPE => 2;
 
-use vars qw($skipproperties $skipheaders);
+use vars qw($skipproperties $skipheaders $VERSION);
+$VERSION = "0.0.20060719";
 #
 # Descriptions partially based on mapitags.h
 #
@@ -151,7 +196,7 @@ use constant MAP_ADDRESSITEM_FILE => {
 
 sub new {
   my $that = shift;
-  my $file = shift or die "File name is required parameter";
+  my $file = shift or croak "File name is required parameter";
   my $verbose = shift;
 
   my $self = $that->_empty_new;
@@ -159,7 +204,7 @@ sub new {
   my $msg = OLE::Storage_Lite->new($file);
   my $pps = $msg->getPpsTree(1);
   $pps or die "Parsing $file as OLE file failed.";
-  $self->set_verbosity(1) if $verbose;
+  $self->_set_verbosity(1) if $verbose;
   $self->_parse($pps);
 
   return $self;
@@ -270,7 +315,7 @@ sub as_string {
   return $self->_mime_object->as_string;
 }
 
-sub set_verbosity {
+sub _set_verbosity {
   my ($self, $verbosity) = @_;
   defined $verbosity or die "Internal error: no verbosity level";
   $self->{VERBOSE} = $verbosity;
@@ -285,7 +330,7 @@ sub set_verbosity {
 #
 
 #
-# RootItem: Check Root Entry, parse sub-entries.
+# RootDir: Check Root Entry, parse sub-entries.
 # The OLE file consists of a single entry called Root Entry, which has
 # several children. These children are parsed in the sub SubItem.
 # 
@@ -398,6 +443,7 @@ sub _AttachmentItem {
 
     if ($property eq '3701') {	# Nested MSG file
       my $msgp = $self->_empty_new();
+      $msgp->_set_verbosity($self->{VERBOSE});
       $msgp->_parse($pps);
       my $data = $msgp->as_string;
       $att_info->{DATA} = $data;
@@ -569,26 +615,6 @@ sub _SaveAttachment {
     body => $att->{DATA});
   $self->_clean_part_header($m);
   $mime->parts_add([$m]);
-}
-
-sub _SetAddressPart {
-  my ($self, $adrname, $partname, $data) = @_;
-
-  my $address = $self->{ADDRESSES}->{$adrname};
-  $data =~ s/\000//g;
-  #warn "Processing address data part $partname : $data\n";
-  if (defined ($address->{$partname})) {
-    if ($address->{$partname} eq $data) {
-      warn "Skipping duplicate but identical address information for"
-      . " $partname\n" if $self->{VERBOSE};
-    } else {
-      warn "Address information $partname inconsistent:\n";
-      warn "    Original data: $address->{$partname}\n";
-      warn "    New data: $data\n";
-    }
-  } else {
-    $address->{$partname} = $data;
-  }
 }
 
 # Set header fields
