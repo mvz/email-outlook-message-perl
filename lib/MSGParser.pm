@@ -314,6 +314,15 @@ sub _set_verbosity {
 # directory (if such an item is itself a directory, it will in turn be
 # processed by the relevant *_dir function).
 #
+# RootDir
+#   SubItem
+#     SubItemDir
+#	AddressDir
+#	  AddressItem
+#	AttachmentDir
+#	  AttachmentItem
+#     SubItemFile
+#
 
 #
 # _process_root_dir: Check Root Entry, parse sub-entries.
@@ -356,14 +365,19 @@ sub _SubItemDir {
   }
 }
 
-sub _SubItemFile {
-  my ($self, $pps) = @_;
+sub _process_pps_file_entry {
+  my ($self, $pps, $target, $map) = @_;
 
   my $name = $self->_GetName($pps);
-  my ($property, $encoding) = $self->_ParseItemName($name);
+  my ($property, $encoding) = $self->_parse_item_name($name);
 
-  $self->_MapProperty($self, $pps->{Data}, $property, MAP_SUBITEM_FILE)
+  $self->_MapProperty($target, $pps->{Data}, $property, $map)
     or $self->_UnknownFile($name, $pps);
+}
+
+sub _SubItemFile {
+  my ($self, $pps) = @_;
+  $self->_process_pps_file_entry($pps, $self, MAP_SUBITEM_FILE);
 }
 
 sub _AddressDir {
@@ -389,7 +403,7 @@ sub _AddressItem {
   if ($pps->{Type} == DIR_TYPE) {
     $self->_UnknownDir($name);
   } elsif ($pps->{Type} == FILE_TYPE) {
-    my ($property, $encoding) = $self->_ParseItemName($name);
+    my ($property, $encoding) = $self->_parse_item_name($name);
     $self->_MapProperty($addr_info, $pps->{Data}, $property,
       MAP_ADDRESSITEM_FILE) or $self->_UnknownFile($name, $pps);
   } else {
@@ -423,7 +437,7 @@ sub _AttachmentItem {
 
   my $name = $self->_GetName($pps);
 
-  my ($property, $encoding) = $self->_ParseItemName($name);
+  my ($property, $encoding) = $self->_parse_item_name($name);
 
   if ($pps->{Type} == DIR_TYPE) {
 
@@ -483,7 +497,7 @@ sub _UnknownFile {
     return;
   }
 
-  my ($property, $encoding) = $self->_ParseItemName($name);
+  my ($property, $encoding) = $self->_parse_item_name($name);
   unless (defined $property) {
     warn "Unknown FILE entry $name\n";
     return;
@@ -566,7 +580,7 @@ sub _SubmissionIdDate {
   return $self->_FormatDate([$6,$5,$4,$3,$2-1,$year]);
 }
 
-sub _ParseItemName {
+sub _parse_item_name {
   my ($self, $name) = @_;
 
   if ($name =~ /^__substg1 0_(....)(....)$/) {
