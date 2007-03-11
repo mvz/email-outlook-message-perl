@@ -333,19 +333,13 @@ sub _process_root_dir {
   my ($self, $pps) = @_;
 
   foreach my $child (@{$pps->{Child}}) {
-    $self->_SubItem($child);
-  }
-}
-
-sub _SubItem {
-  my ($self, $pps) = @_;
-  
-  if ($pps->{Type} == DIR_TYPE) {
-    $self->_SubItemDir($pps);
-  } elsif ($pps->{Type} == FILE_TYPE) {
-    $self->_process_pps_file_entry($pps, $self, MAP_SUBITEM_FILE);
-  } else {
-    warn "Unknown entry type: $pps->{Type}";
+    if ($child->{Type} == DIR_TYPE) {
+      $self->_SubItemDir($child);
+    } elsif ($child->{Type} == FILE_TYPE) {
+      $self->_process_pps_file_entry($child, $self, MAP_SUBITEM_FILE);
+    } else {
+      warn "Unknown entry type: $child->{Type}";
+    }
   }
 }
 
@@ -375,33 +369,37 @@ sub _process_pps_file_entry {
     or $self->_UnknownFile($name, $pps);
 }
 
+## sub _process_pps_children {
+##   my ($self, $pps, $process_dir, $process_file) = @_;
+## 
+##   foreach my $child (@{$pps->{Child}}) {
+##     if ($pps->{Type} == DIR_TYPE) {
+##       &$process_dir($self, $child);
+##     } elsif ($pps->{Type} == FILE_TYPE) {
+##       $self->_process_pps_file_entry($pps, $self, MAP_SUBITEM_FILE);
+##     } else {
+##       warn "Unknown entry type: $pps->{Type}";
+##     }
+##   }
+## }
+
 sub _AddressDir {
   my ($self, $pps) = @_;
 
-  my $address = {
-    NAME	=> undef,
-    ADDRESS	=> undef,
-    TYPE	=> "",
-  };
+  my $addr_info = { NAME => undef, ADDRESS => undef, TYPE => "" };
+
   foreach my $child (@{$pps->{Child}}) {
-    $self->_AddressItem($child, $address);
+    my $name = $self->_get_pps_name($child);
+    if ($child->{Type} == DIR_TYPE) {
+      # DIR Entries: There should be none.
+      $self->_UnknownDir($name);
+    } elsif ($child->{Type} == FILE_TYPE) {
+      $self->_process_pps_file_entry($child, $addr_info, MAP_ADDRESSITEM_FILE);
+    } else {
+      warn "Unknown entry type: $child->{Type}";
+    }
   }
-  push @{$self->{ADDRESSES}}, $address;
-}
-
-sub _AddressItem {
-  my ($self, $pps, $addr_info) = @_;
-
-  my $name = $self->_get_pps_name($pps);
-
-  # DIR Entries: There should be none.
-  if ($pps->{Type} == DIR_TYPE) {
-    $self->_UnknownDir($name);
-  } elsif ($pps->{Type} == FILE_TYPE) {
-    $self->_process_pps_file_entry($pps, $addr_info, MAP_ADDRESSITEM_FILE);
-  } else {
-    warn "Unknown entry type: $pps->{Type}";
-  }
+  push @{$self->{ADDRESSES}}, $addr_info;
 }
 
 sub _AttachmentDir {
