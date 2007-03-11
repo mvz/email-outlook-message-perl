@@ -354,21 +354,21 @@ sub _SubItemDir {
 
   $self->_GetOLEDate($pps);
 
-  my $name = $self->_GetName($pps);
+  my $name = $self->_get_pps_name($pps);
 
   if ($name =~ /__recip_version1 0_ /) { # Address of one recipient
     $self->_AddressDir($pps);
   } elsif ($name =~ '__attach_version1 0_ ') { # Attachment
     $self->_AttachmentDir($pps);
   } else {
-    $self->_UnknownDir($self->_GetName($pps));
+    $self->_UnknownDir($self->_get_pps_name($pps));
   }
 }
 
 sub _process_pps_file_entry {
   my ($self, $pps, $target, $map) = @_;
 
-  my $name = $self->_GetName($pps);
+  my $name = $self->_get_pps_name($pps);
   my ($property, $encoding) = $self->_parse_item_name($name);
 
   $self->_MapProperty($target, $pps->{Data}, $property, $map)
@@ -392,7 +392,7 @@ sub _AddressDir {
 sub _AddressItem {
   my ($self, $pps, $addr_info) = @_;
 
-  my $name = $self->_GetName($pps);
+  my $name = $self->_get_pps_name($pps);
 
   # DIR Entries: There should be none.
   if ($pps->{Type} == DIR_TYPE) {
@@ -428,11 +428,9 @@ sub _AttachmentDir {
 sub _AttachmentItem {
   my ($self, $pps, $att_info) = @_;
 
-  my $name = $self->_GetName($pps);
-
-  my ($property, $encoding) = $self->_parse_item_name($name);
-
   if ($pps->{Type} == DIR_TYPE) {
+    my $name = $self->_get_pps_name($pps);
+    my ($property, $encoding) = $self->_parse_item_name($name);
 
     if ($property eq '3701') {	# Nested MSG file
       my $msgp = $self->_empty_new();
@@ -447,8 +445,7 @@ sub _AttachmentItem {
     }
 
   } elsif ($pps->{Type} == FILE_TYPE) {
-    $self->_MapProperty($att_info, $pps->{Data}, $property,
-      MAP_ATTACHMENT_FILE) or $self->_UnknownFile($name, $pps);
+    $self->_process_pps_file_entry($pps, $att_info, MAP_ATTACHMENT_FILE);
   } else {
     warn "Unknown entry type: $pps->{Type}";
   }
@@ -525,7 +522,7 @@ sub _is_transmittable_property {
   return 0;
 }
 
-sub _GetName {
+sub _get_pps_name {
   my ($self, $pps) = @_;
   return $self->_NormalizeWhiteSpace(OLE::Storage_Lite::Ucs2Asc($pps->{Name}));
 }
