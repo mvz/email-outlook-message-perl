@@ -355,9 +355,9 @@ sub _process_subdirectory {
   my $name = $self->_get_pps_name($pps);
 
   if ($name =~ /__recip_version1 0_ /) { # Address of one recipient
-    $self->_process_address_dir($pps);
+    $self->_process_address($pps);
   } elsif ($name =~ '__attach_version1 0_ ') { # Attachment
-    $self->_process_attachment_dir($pps);
+    $self->_process_attachment($pps);
   } else {
     $self->_warn_about_unknown_directory($pps);
   }
@@ -366,7 +366,7 @@ sub _process_subdirectory {
 #
 # Process a subdirectory that contains an email address.
 #
-sub _process_address_dir {
+sub _process_address {
   my ($self, $pps) = @_;
 
   my $addr_info = { NAME => undef, ADDRESS => undef, TYPE => "" };
@@ -386,7 +386,7 @@ sub _process_address_dir {
 #
 # Process a subdirectory that contains an attachment.
 #
-sub _process_attachment_dir {
+sub _process_attachment {
   my ($self, $pps) = @_;
 
   my $attachment = {
@@ -400,7 +400,7 @@ sub _process_attachment_dir {
   };
   foreach my $child (@{$pps->{Child}}) {
     if ($child->{Type} == DIR_TYPE) {
-      $self->_AttachmentItemDir($child, $attachment);
+      $self->_process_attachment_subdirectory($child, $attachment);
     } elsif ($child->{Type} == FILE_TYPE) {
       $self->_process_pps_file_entry($child, $attachment, MAP_ATTACHMENT_FILE);
     } else {
@@ -413,7 +413,10 @@ sub _process_attachment_dir {
   push @{$self->{ATTACHMENTS}}, $attachment;
 }
 
-sub _AttachmentItemDir {
+#
+# Process a subdirectory that is part of an attachment
+#
+sub _process_attachment_subdirectory {
   my ($self, $pps, $att) = @_;
   my $name = $self->_get_pps_name($pps);
   my ($property, $encoding) = $self->_parse_item_name($name);
@@ -431,30 +434,27 @@ sub _AttachmentItemDir {
   }
 }
 
+#
+# Generic processor for a file entry: Inserts the entry's data into the
+# hash $target, using the $map to find the proper key.
+#
 sub _process_pps_file_entry {
   my ($self, $pps, $target, $map) = @_;
 
   my $name = $self->_get_pps_name($pps);
   my ($property, $encoding) = $self->_parse_item_name($name);
 
-  $self->_MapProperty($target, $pps->{Data}, $property, $map)
-    or $self->_warn_about_unknown_file($pps);
-}
-
-sub _MapProperty {
-  my ($self, $hash, $data, $property, $map) = @_;
-
-  defined $property or return 0;
-  my $arr = $map->{$property} or return 0;
-
-  # FIXME: This probably messes up unicode processing.
-  if ($arr->[1]) {
-    $data =~ s/\000$//sg;
-    $data =~ s/\r\n/\n/sg;
+  if (defined $property and my $arr = $map->{$property}) {
+    my $data = $pps->{Data};
+    # FIXME: This probably messes up unicode processing.
+    if ($arr->[1]) {
+      $data =~ s/\000$//sg;
+      $data =~ s/\r\n/\n/sg;
+    }
+    $target->{$arr->[0]} = $data;
+  } else {
+    $self->_warn_about_unknown_file($pps);
   }
-  $hash->{$arr->[0]} = $data;
-
-  return 1;
 }
 
 sub _warn_about_unknown_directory {
