@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use Test::More tests => 4;
+use Test::More tests => 6;
 use MSGParser;
 use Email::MIME;
 
@@ -13,4 +13,4 @@ is($m->header("Subject"), "Test for MSGConvert -- plain text", "Testing subject"
 is($m->header("Date"), "Mon, 26 Feb 2007 22:56:40 +0100", "Testing date");
 # TODO: Is this the behavior we want?
 is($m->header("From"), "<>", "Testing from");
-like($m->header("To"), 'someone@somewhere.com', "Testing to");
+like($m->header("To"), qr{someone\@somewhere\.com}, "Testing to");
