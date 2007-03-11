@@ -389,10 +389,8 @@ sub _AddressDir {
   my $addr_info = { NAME => undef, ADDRESS => undef, TYPE => "" };
 
   foreach my $child (@{$pps->{Child}}) {
-    my $name = $self->_get_pps_name($child);
     if ($child->{Type} == DIR_TYPE) {
-      # DIR Entries: There should be none.
-      $self->_UnknownDir($name);
+      $self->_UnknownDir($self->_get_pps_name($child)); # DIR Entries: There should be none.
     } elsif ($child->{Type} == FILE_TYPE) {
       $self->_process_pps_file_entry($child, $addr_info, MAP_ADDRESSITEM_FILE);
     } else {
@@ -415,7 +413,13 @@ sub _AttachmentDir {
     DATA	=> undef,
   };
   foreach my $child (@{$pps->{Child}}) {
-    $self->_AttachmentItem($child, $attachment);
+    if ($child->{Type} == DIR_TYPE) {
+      $self->_AttachmentItemDir($child, $attachment);
+    } elsif ($child->{Type} == FILE_TYPE) {
+      $self->_process_pps_file_entry($child, $attachment, MAP_ATTACHMENT_FILE);
+    } else {
+      warn "Unknown entry type: $child->{Type}";
+    }
   }
   if ($attachment->{MIMETYPE} eq 'multipart/signed') {
     $attachment->{ENCODING} = '8bit';
@@ -423,20 +427,8 @@ sub _AttachmentDir {
   push @{$self->{ATTACHMENTS}}, $attachment;
 }
 
-sub _AttachmentItem {
-  my ($self, $pps, $att_info) = @_;
-
-  if ($pps->{Type} == DIR_TYPE) {
-    $self->_AttachmentItemDir($pps, $att_info);
-  } elsif ($pps->{Type} == FILE_TYPE) {
-    $self->_process_pps_file_entry($pps, $att_info, MAP_ATTACHMENT_FILE);
-  } else {
-    warn "Unknown entry type: $pps->{Type}";
-  }
-}
-
 sub _AttachmentItemDir {
-  my ($self, $pps, $att_info) = @_;
+  my ($self, $pps, $att) = @_;
   my $name = $self->_get_pps_name($pps);
   my ($property, $encoding) = $self->_parse_item_name($name);
 
@@ -445,9 +437,9 @@ sub _AttachmentItemDir {
     $msgp->_set_verbosity($self->{VERBOSE});
     $msgp->_process_root_dir($pps);
 
-    $att_info->{DATA} = $msgp->as_string;
-    $att_info->{MIMETYPE} = 'message/rfc822';
-    $att_info->{ENCODING} = '8bit';
+    $att->{DATA} = $msgp->as_string;
+    $att->{MIMETYPE} = 'message/rfc822';
+    $att->{ENCODING} = '8bit';
   } else {
     $self->_UnknownDir($name);
   }
