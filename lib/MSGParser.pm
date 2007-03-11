@@ -429,25 +429,29 @@ sub _AttachmentItem {
   my ($self, $pps, $att_info) = @_;
 
   if ($pps->{Type} == DIR_TYPE) {
-    my $name = $self->_get_pps_name($pps);
-    my ($property, $encoding) = $self->_parse_item_name($name);
-
-    if ($property eq '3701') {	# Nested MSG file
-      my $msgp = $self->_empty_new();
-      $msgp->_set_verbosity($self->{VERBOSE});
-      $msgp->_process_root_dir($pps);
-
-      $att_info->{DATA} = $msgp->as_string;
-      $att_info->{MIMETYPE} = 'message/rfc822';
-      $att_info->{ENCODING} = '8bit';
-    } else {
-      $self->_UnknownDir($name);
-    }
-
+    $self->_AttachmentItemDir($pps, $att_info);
   } elsif ($pps->{Type} == FILE_TYPE) {
     $self->_process_pps_file_entry($pps, $att_info, MAP_ATTACHMENT_FILE);
   } else {
     warn "Unknown entry type: $pps->{Type}";
+  }
+}
+
+sub _AttachmentItemDir {
+  my ($self, $pps, $att_info) = @_;
+  my $name = $self->_get_pps_name($pps);
+  my ($property, $encoding) = $self->_parse_item_name($name);
+
+  if ($property eq '3701') {	# Nested MSG file
+    my $msgp = $self->_empty_new();
+    $msgp->_set_verbosity($self->{VERBOSE});
+    $msgp->_process_root_dir($pps);
+
+    $att_info->{DATA} = $msgp->as_string;
+    $att_info->{MIMETYPE} = 'message/rfc822';
+    $att_info->{ENCODING} = '8bit';
+  } else {
+    $self->_UnknownDir($name);
   }
 }
 
@@ -524,11 +528,7 @@ sub _is_transmittable_property {
 
 sub _get_pps_name {
   my ($self, $pps) = @_;
-  return $self->_NormalizeWhiteSpace(OLE::Storage_Lite::Ucs2Asc($pps->{Name}));
-}
-
-sub _NormalizeWhiteSpace {
-  my ($self, $name) = @_;
+  my $name = OLE::Storage_Lite::Ucs2Asc($pps->{Name});
   $name =~ s/\W/ /g;
   return $name;
 }
