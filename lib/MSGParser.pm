@@ -314,14 +314,15 @@ sub _set_verbosity {
 # directory (if such an item is itself a directory, it will in turn be
 # processed by the relevant *_dir function).
 #
-# RootDir
-#   SubItem
-#     SubItemDir
-#	AddressDir
-#	  AddressItem
-#	AttachmentDir
-#	  AttachmentItem
-#     SubItemFile
+# The structure is as follows:
+#
+# Root
+#   Items with properties of the e-mail
+#   Dirs containting adresses
+#     Items with properties of the address
+#   Dirs containing Attachments
+#     Items with properties of the attachment (inlcluding its data)
+#     Dir that is itself a .msg file (if the attachment is an email).
 #
 
 #
@@ -334,7 +335,7 @@ sub _process_root_dir {
 
   foreach my $child (@{$pps->{Child}}) {
     if ($child->{Type} == DIR_TYPE) {
-      $self->_SubItemDir($child);
+      $self->_process_subdirectory($child);
     } elsif ($child->{Type} == FILE_TYPE) {
       $self->_process_pps_file_entry($child, $self, MAP_SUBITEM_FILE);
     } else {
@@ -343,54 +344,36 @@ sub _process_root_dir {
   }
 }
 
-sub _SubItemDir {
+#
+# Process a subdirectory. This is either an address or an attachment.
+#
+sub _process_subdirectory {
   my ($self, $pps) = @_;
 
-  $self->_GetOLEDate($pps);
+  $self->_extract_ole_date($pps);
 
   my $name = $self->_get_pps_name($pps);
 
   if ($name =~ /__recip_version1 0_ /) { # Address of one recipient
-    $self->_AddressDir($pps);
+    $self->_process_address_dir($pps);
   } elsif ($name =~ '__attach_version1 0_ ') { # Attachment
-    $self->_AttachmentDir($pps);
+    $self->_process_attachment_dir($pps);
   } else {
-    $self->_UnknownDir($self->_get_pps_name($pps));
+    $self->_warn_about_unknown_directory($pps);
   }
 }
 
-sub _process_pps_file_entry {
-  my ($self, $pps, $target, $map) = @_;
-
-  my $name = $self->_get_pps_name($pps);
-  my ($property, $encoding) = $self->_parse_item_name($name);
-
-  $self->_MapProperty($target, $pps->{Data}, $property, $map)
-    or $self->_UnknownFile($name, $pps);
-}
-
-## sub _process_pps_children {
-##   my ($self, $pps, $process_dir, $process_file) = @_;
-## 
-##   foreach my $child (@{$pps->{Child}}) {
-##     if ($pps->{Type} == DIR_TYPE) {
-##       &$process_dir($self, $child);
-##     } elsif ($pps->{Type} == FILE_TYPE) {
-##       $self->_process_pps_file_entry($pps, $self, MAP_SUBITEM_FILE);
-##     } else {
-##       warn "Unknown entry type: $pps->{Type}";
-##     }
-##   }
-## }
-
-sub _AddressDir {
+#
+# Process a subdirectory that contains an email address.
+#
+sub _process_address_dir {
   my ($self, $pps) = @_;
 
   my $addr_info = { NAME => undef, ADDRESS => undef, TYPE => "" };
 
   foreach my $child (@{$pps->{Child}}) {
     if ($child->{Type} == DIR_TYPE) {
-      $self->_UnknownDir($self->_get_pps_name($child)); # DIR Entries: There should be none.
+      $self->_warn_about_unknown_directory($child); # DIR Entries: There should be none.
     } elsif ($child->{Type} == FILE_TYPE) {
       $self->_process_pps_file_entry($child, $addr_info, MAP_ADDRESSITEM_FILE);
     } else {
@@ -400,7 +383,10 @@ sub _AddressDir {
   push @{$self->{ADDRESSES}}, $addr_info;
 }
 
-sub _AttachmentDir {
+#
+# Process a subdirectory that contains an attachment.
+#
+sub _process_attachment_dir {
   my ($self, $pps) = @_;
 
   my $attachment = {
@@ -441,8 +427,18 @@ sub _AttachmentItemDir {
     $att->{MIMETYPE} = 'message/rfc822';
     $att->{ENCODING} = '8bit';
   } else {
-    $self->_UnknownDir($name);
+    $self->_warn_about_unknown_directory($pps);
   }
+}
+
+sub _process_pps_file_entry {
+  my ($self, $pps, $target, $map) = @_;
+
+  my $name = $self->_get_pps_name($pps);
+  my ($property, $encoding) = $self->_parse_item_name($name);
+
+  $self->_MapProperty($target, $pps->{Data}, $property, $map)
+    or $self->_UnknownFile($name, $pps);
 }
 
 sub _MapProperty {
@@ -460,9 +456,10 @@ sub _MapProperty {
   return 1;
 }
 
-sub _UnknownDir {
-  my ($self, $name) = @_;
+sub _warn_about_unknown_directory {
+  my ($self, $pps) = @_;
 
+  my $name = $self->_get_pps_name($pps);
   if ($name eq '__nameid_version1 0') {
     $self->{VERBOSE}
       and warn "Skipping DIR entry $name (Introductory stuff)\n";
@@ -523,7 +520,10 @@ sub _get_pps_name {
   return $name;
 }
 
-sub _GetOLEDate {
+#
+# Extract time stamp of this OLE item.
+#
+sub _extract_ole_date {
   my ($self, $pps) = @_;
   unless (defined ($self->{OLEDATE})) {
     # Make Date
