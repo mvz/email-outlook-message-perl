@@ -2,10 +2,10 @@
 use strict;
 use warnings;
 use Test::More tests => 6;
-use MSGParser;
+use Email::MSG;
 use Email::MIME;
 
-my $p = new MSGParser('t/files/plain_unsent.msg');
+my $p = new Email::MSG('t/files/plain_unsent.msg');
 ok($p, "Parsing succeeded");
 my $m = Email::MIME->new($p->as_string);
 like($m->content_type, qr{^text/plain}, "Content type should be text/plain");

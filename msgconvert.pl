@@ -17,7 +17,7 @@
 # Public License for more details.
 #
 
-use MSGParser;
+use Email::MSG;
 use Getopt::Long;
 use Pod::Usage;
 
@@ -31,7 +31,7 @@ pod2usage(1) if $help;
 defined $ARGV[0] or pod2usage(2);
 
 foreach my $file (@ARGV) {
-  my $parser = new MSGParser $file, $verbose;
+  my $parser = new Email::MSG $file, $verbose;
   print $parser->as_mbox();
 }
 

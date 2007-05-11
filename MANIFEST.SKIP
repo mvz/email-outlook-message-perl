@@ -3,6 +3,7 @@
 ^t/testsuite/
 ^t/private.t$
 ^pm_to_blib$
+^cover_db/
 ^Makefile.old$
 ^Makefile$
 ^MANIFEST.bak$

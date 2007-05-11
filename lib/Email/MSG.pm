@@ -1,16 +1,14 @@
-package MSGParser;
+package Email::MSG;
 =head1 NAME
 
-MSGParser.pm - Convert Outlook .msg files to standard MIME.
+Email::MSG.pm - Convert Outlook .msg files to standard MIME.
 
 =head1 SYNOPSIS
 
-  use MSGParser;
+  use Email::MSG;
 
-  my $mp = new MSGParser $msg $verbose;
-  print $mp->as_string;
-  print $mp->as_mbox;
-  # TODO: as_email_mime ??
+  my $mp = new Email::MSG $msg $verbose;
+  print $mp->to_email_mime;
 
 =head1 DESCRIPTION
 
@@ -25,14 +23,9 @@ Parses .MSG files as produced by Microsoft Outlook.
     Parse the file pointed at by $msg. Set $verbose to a true value to
     print information about skipped parts of the .msg file on STDERR.
 
-=item B<as_string>
+=item B<to_email_mime>
 
-    Output result as a string representing a MIME-encoded email.
-
-=item B<as_mbox>
-
-    Output result as a string representing an mbox file containing a single
-    email (deprecated).
+    Output result as an Email::MIME object.
 
 =head1 BUGS
 
@@ -220,7 +213,7 @@ sub _empty_new {
   }, $class;
 }
 
-sub _mime_object {
+sub to_email_mime {
   my $self = shift;
 
   my ($plain, $html);
@@ -291,14 +284,9 @@ sub as_mbox {
 
   # The date used here is not really important.
   my $mbox = "From $from " . scalar localtime() . "\n";
-  $mbox .= $self->as_string;
+  $mbox .= $self->to_email_mime->as_string;
   $mbox .= "\n";
   return $mbox;
-}
-
-sub as_string {
-  my $self = shift;
-  return $self->_mime_object->as_string;
 }
 
 sub _set_verbosity {
@@ -426,7 +414,7 @@ sub _process_attachment_subdirectory {
     $msgp->_set_verbosity($self->{VERBOSE});
     $msgp->_process_root_dir($pps);
 
-    $att->{DATA} = $msgp->as_string;
+    $att->{DATA} = $msgp->to_email_mime->as_string;
     $att->{MIMETYPE} = 'message/rfc822';
     $att->{ENCODING} = '8bit';
   } else {

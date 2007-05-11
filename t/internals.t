@@ -2,11 +2,11 @@
 use strict;
 use warnings;
 use Test::More tests => 17;
-use MSGParser;
+use Email::MSG;
 use MIME::Entity;
 use Email::MIME::Creator;
 
-my $p = MSGParser->_empty_new();
+my $p = Email::MSG->_empty_new();
 ok($p, 'Checking internal new');
 test_copy_header_data($p);
 test_is_transmittable_property($p);

@@ -3,7 +3,7 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
   'NAME'	    => 'MSGConvert',
   'AUTHOR'	    => 'Matijs van Zuijlen',
-  'VERSION_FROM'    => 'lib/MSGParser.pm',
+  'VERSION_FROM'    => 'lib/Email/MSG.pm',
   'EXE_FILES'	    => [ 'msgconvert.pl', 'oledump.pl' ],
   'PREREQ_PM'	=> {
     OLE::Storage_Lite => 0,
