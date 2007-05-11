@@ -4,6 +4,8 @@ TODO (Bugs)
 - Process gpg-signed mail properly.
 
 TODO (Functional)
+- Think long and hard about class interface
+
 - Do s/t useful with UTF-16 encoded text.
 - Allow more than one file to be specified on the command line
 - Allow an output file to be specified on the command line

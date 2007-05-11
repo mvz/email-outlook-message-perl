@@ -682,7 +682,10 @@ sub _copy_header_data {
   my ($self, $mime) = @_;
 
   defined $self->{HEAD} or return;
-  my $parsed = new Email::Simple($self->{HEAD});
+
+  # The extra \n is neede for Email::Simple to pick up all headers.
+  # This is a change in Email::Simple.
+  my $parsed = new Email::Simple($self->{HEAD} . "\n");
 
   foreach my $tag (grep { !$skipheaders->{uc $_}} $parsed->header_names) {
     $mime->header_set($tag, $parsed->header($tag));

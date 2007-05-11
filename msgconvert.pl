@@ -28,13 +28,12 @@ GetOptions('verbose' => \$verbose, 'help|?' => \$help) or pod2usage(2);
 pod2usage(1) if $help;
 
 # Get file name
-my $file = $ARGV[0];
-defined $file or pod2usage(2);
-warn "Will parse file: $file\n" if $verbose; 
+defined $ARGV[0] or pod2usage(2);
 
-# parse PPS tree
-my $parser = new MSGParser $file, $verbose;
-print $parser->as_mbox();
+foreach my $file (@ARGV) {
+  my $parser = new MSGParser $file, $verbose;
+  print $parser->as_mbox();
+}
 
 #
 # Usage info follows.
