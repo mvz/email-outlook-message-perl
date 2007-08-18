@@ -18,21 +18,36 @@
 #
 
 use Email::MSG;
+use Email::LocalDelivery;
 use Getopt::Long;
 use Pod::Usage;
+use File::Basename;
 
 # Setup command line processing.
 my $verbose = '';
+my $mboxfile = '';
 my $help = '';	    # Print help message and exit.
-GetOptions('verbose' => \$verbose, 'help|?' => \$help) or pod2usage(2);
+GetOptions(
+  'mbox=s' => \$mboxfile,
+  'verbose' => \$verbose,
+  'help|?' => \$help) or pod2usage(2);
 pod2usage(1) if $help;
 
-# Get file name
+# Check file names
 defined $ARGV[0] or pod2usage(2);
 
 foreach my $file (@ARGV) {
-  my $parser = new Email::MSG $file, $verbose;
-  print $parser->as_mbox();
+  my $mail = new Email::MSG($file, $verbose)->to_email_mime->as_string;
+  if ($mboxfile ne '') {
+    Email::LocalDelivery->deliver($mail, $mboxfile);
+  } else {
+    my $basename = basename($file, qr/\.msg/i);
+    my $outfile = "$basename.mime";
+    open OUT, ">$outfile"
+      or die "Can't open $outfile for writing: $!";
+    print OUT $mail;
+    close OUT;
+  }
 }
 
 #
@@ -46,15 +61,21 @@ msgconvert.pl - Convert Outlook .msg files to mbox format
 
 =head1 SYNOPSIS
 
-msgconvert.pl [options] <file.msg>
+msgconvert.pl [options] <file.msg>...
 
   Options:
-    --verbose	be verbose
-    --help	help message
+    --mbox <file>   deliver messages to mbox file <file>
+    --verbose	    be verbose
+    --help	    help message
 
 =head1 OPTIONS
 
 =over 8
+
+=item B<--mbox>
+
+    Deliver to the given mbox file instead of creating individual .mime
+    files.
 
 =item B<--verbose>
 
@@ -66,11 +87,17 @@ msgconvert.pl [options] <file.msg>
 
 =head1 DESCRIPTION
 
-This program will output the message contained in file.msg in mbox format
-on stdout. It will complain about unrecognized OLE parts on
-stderr.
+This program will convert the messages contained in the Microsoft Outlook
+files <file.msg>...  to message/rfc822 files with extension .mime.
+Alternatively, if the --mbox option is present, all messages will be put in
+the given mbox file.  This program will complain about unrecognized OLE
+parts in the input files on stderr.
 
 =head1 BUGS
+
+The program will not check whether output files already exist. Also, if you
+feed it "foo.MSG" and "foo.msg", you'll end up with one "foo.mime",
+containing one of the messages.
 
 Not all data that's in the .MSG file is converted. There simply are some
 parts whose meaning escapes me. One of these must contain the date the

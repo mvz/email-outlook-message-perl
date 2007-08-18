@@ -7,8 +7,9 @@ Email::MSG.pm - Convert Outlook .msg files to standard MIME.
 
   use Email::MSG;
 
-  my $mp = new Email::MSG $msg $verbose;
-  print $mp->to_email_mime;
+  my $msg = new Email::MSG $filename, $verbose;
+  my $mime = $msg->to_email_mime;
+  $mime->as_string;
 
 =head1 DESCRIPTION
 
@@ -49,7 +50,7 @@ use constant DIR_TYPE => 1;
 use constant FILE_TYPE => 2;
 
 use vars qw($skipproperties $skipheaders $VERSION);
-$VERSION = "0.0.20060719";
+$VERSION = "0.01";
 #
 # Descriptions partially based on mapitags.h
 #
@@ -268,25 +269,6 @@ sub to_email_mime {
   $self->_copy_header_data($mime);
 
   return $mime;
-}
-
-# Actually output the message in mbox format
-sub as_mbox {
-  my $self = shift;
-
-  # Construct From line from whatever we know.
-  my $from = (
-    $self->{FROM_ADDR_TYPE} eq "SMTP" ?
-    $self->{FROM_ADDR} :
-    'someone@somewhere'
-  );
-  $from =~ s/\n//g;
-
-  # The date used here is not really important.
-  my $mbox = "From $from " . scalar localtime() . "\n";
-  $mbox .= $self->to_email_mime->as_string;
-  $mbox .= "\n";
-  return $mbox;
 }
 
 sub _set_verbosity {
@@ -600,9 +582,16 @@ sub _AddHeaderField {
 
 sub _Address {
   my ($self, $tag) = @_;
-  my $name = $self->{$tag} || "";
+
+  my $result = $self->{$tag} || "";
+
   my $address = $self->{$tag . "_ADDR"} || "";
-  return "$name <$address>";
+  if ($address) {
+    $result .= " " if $result;
+    $result .= "<$address>";
+  }
+
+  return $result;
 }
 
 # Find SMTP addresses for the given list of names

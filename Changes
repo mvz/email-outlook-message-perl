@@ -1,3 +1,10 @@
+0.01	2007-05-11
+
+  - Move MSGParser.pm to Email::MSG
+  - Email::MSG object exposes methods new and as_email_mime
+  - msgconvert.pl now either does delivery to one mbox file, or to
+    individual .mime files for each input .msg file.
+
 0.20070309  2007-03-09
 
   - Use Email::* instead of MIME::Tools for message building and header
