@@ -17,7 +17,7 @@
 # Public License for more details.
 #
 
-use Email::MSG;
+use Email::Outlook::MSG;
 use Email::LocalDelivery;
 use Getopt::Long;
 use Pod::Usage;
@@ -37,7 +37,7 @@ pod2usage(1) if $help;
 defined $ARGV[0] or pod2usage(2);
 
 foreach my $file (@ARGV) {
-  my $mail = new Email::MSG($file, $verbose)->to_email_mime->as_string;
+  my $mail = new Email::Outlook::MSG($file, $verbose)->to_email_mime->as_string;
   if ($mboxfile ne '') {
     Email::LocalDelivery->deliver($mail, $mboxfile);
   } else {

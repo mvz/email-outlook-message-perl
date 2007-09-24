@@ -1,7 +1,8 @@
-0.01	2007-05-11
+0.901	2007-09-24
 
-  - Move MSGParser.pm to Email::MSG
-  - Email::MSG object exposes methods new and as_email_mime
+  - First release as module on CPAN
+  - Move MSGParser.pm to Email::Outlook::MSG
+  - Email::Outlook::MSG object exposes methods new and as_email_mime
   - msgconvert.pl now either does delivery to one mbox file, or to
     individual .mime files for each input .msg file.
 

@@ -2,9 +2,9 @@
 use strict;
 use warnings;
 use Test::More tests => 2;
-use Email::Outlook::Message;
+use Email::Outlook::MSG;
 
-my $p = new Email::Outlook::Message('t/files/gpg_signed.msg');
+my $p = new Email::Outlook::MSG('t/files/gpg_signed.msg');
 ok($p, "Parsing succeeded");
 TODO: {
   local $TODO = "GPG Parsing doesn't work yet";
