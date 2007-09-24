@@ -623,9 +623,9 @@ sub _ExpandAddressList {
 # TODO: Don't really want to need this!
 sub _clean_part_header {
   my ($self, $part) = @_;
-  $part->header_set('Date', undef);
+  $part->header_set('Date');
   unless ($part->content_type =~ /^multipart\//) {
-    $part->header_set('MIME-Version', undef)
+    $part->header_set('MIME-Version')
   };
 }
 
