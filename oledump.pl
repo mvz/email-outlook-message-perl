@@ -21,16 +21,12 @@
 #   2002.04.17:
 #	Allow more characters as printable.
 #
-# Usage:
-#   oledump.pl <file> [print_data]
-#
-#   will show the OLE structure of <file>. setting print_data to 1 will
-#   also dump the data parts, showing hex and any printable characters.
-#
 #=================================================================
 
 use strict;
 use OLE::Storage_Lite;
+use Getopt::Long;
+use Pod::Usage;
 use locale;
 
 #----------------------------------------------------------------
@@ -98,10 +94,52 @@ sub PrnItem {
 }
 
 # Main
-die "No files are specified" if($#ARGV < 0);
-my $oOl = OLE::Storage_Lite->new($ARGV[0]);
-my $prData = $ARGV[1];
-my $oPps = $oOl->getPpsTree(1);
-die( $ARGV[0]. " must be a OLE file") unless($oPps);
-my $iTtl = 0;
-PrnItem($oPps, 0, \$iTtl, 1, $prData);
+#
+my $prData;
+my $help = '';	    # Print help message and exit.
+my $opt = GetOptions("with-data" => \$prData) or pod2usage(2);
+pod2usage(1) if $help;
+pod2usage(2) if($#ARGV < 0);
+foreach my $file (@ARGV) {
+  my $oOl = OLE::Storage_Lite->new($file);
+  my $oPps = $oOl->getPpsTree(1);
+  die( $file. " must be a OLE file") unless($oPps);
+  my $iTtl = 0;
+  PrnItem($oPps, 0, \$iTtl, 1, $prData);
+}
+#
+# Usage info follows.
+#
+__END__
+
+=head1 NAME
+
+oledump.pl - Dump structure of an OLE file.
+
+=head1 SYNOPSIS
+
+msgconvert.pl [options] <file>...
+
+  Options:
+    --with-data	    dump data too
+    --help	    help message
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<--with-data>
+
+    Dump data as will, showing both hex and any printable characters.
+
+=item B<--help>
+
+    Print a brief help message.
+
+=head1 DESCRIPTION
+
+This program will dump the PPS structure of OLE files passed to it on the
+command line. It is based on smplls.pl by Kawai, Takanori, which is part of
+the OLE::Storage_Lite distribution.
+
+=cut

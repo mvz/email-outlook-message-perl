@@ -4,18 +4,6 @@
 #
 # Convert .MSG files (made by Outlook (Express)) to multipart MIME messages.
 #
-# Copyright 2002, 2004, 2006, 2007 Matijs van Zuijlen
-#
-# This program is free software; you can redistribute it and/or modify it
-# under the terms of the GNU General Public License as published by the
-# Free Software Foundation; either version 2 of the License, or (at your
-# option) any later version.
-#
-# This program is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-# Public License for more details.
-#
 
 use Email::Outlook::MSG;
 use Email::LocalDelivery;
@@ -103,5 +91,16 @@ Not all data that's in the .MSG file is converted. There simply are some
 parts whose meaning escapes me. One of these must contain the date the
 message was sent, for example. Formatting of text messages will also be
 lost. YMMV.
+
+=head1 AUTHOR
+
+Matijs van Zuijlen, C<matijs@matijs.net>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2002, 2004, 2006, 2007 by Matijs van Zuijlen
+
+This program is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
 
 =cut

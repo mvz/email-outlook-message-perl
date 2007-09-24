@@ -4,7 +4,7 @@ WriteMakefile(
   'NAME'	    => 'MSGConvert',
   'AUTHOR'	    => 'Matijs van Zuijlen',
   'VERSION_FROM'    => 'lib/Email/Outlook/MSG.pm',
-  'EXE_FILES'	    => [ 'msgconvert.pl', 'oledump.pl' ],
+  'EXE_FILES'	    => [ 'msgconvert.pl' ],
   'PREREQ_PM'	=> {
     Carp => 0,
     Date::Format => 0,
@@ -14,6 +14,8 @@ WriteMakefile(
     Email::Simple => 2.003,
     OLE::Storage_Lite => 0.14,
     POSIX => 0,
+    ## Needed for msgconvert.pl
+    Email::LocalDelivery => 0.217,
     ## These we need for testing
     Email::MIME::Modifier => 1.441,
     IO::All => 0,

@@ -32,7 +32,18 @@ Parses .MSG files as produced by Microsoft Outlook.
 
 Not all data that's in the .MSG file is converted. There simply are some
 parts whose meaning escapes me. Formatting of text messages will also be
-lost. YMMV.
+lost. GPG signed mail is not processed correctly.
+
+=head1 AUTHOR
+
+Matijs van Zuijlen, C<matijs@matijs.net>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2002, 2004, 2006, 2007 by Matijs van Zuijlen
+
+This module is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
 
 =cut
 use strict;
@@ -50,7 +61,7 @@ use constant DIR_TYPE => 1;
 use constant FILE_TYPE => 2;
 
 use vars qw($skipproperties $skipheaders $VERSION);
-$VERSION = "0.01";
+$VERSION = "0.901";
 #
 # Descriptions partially based on mapitags.h
 #
