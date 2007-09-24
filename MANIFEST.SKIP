@@ -11,3 +11,5 @@
 ^mapitags.h$
 ^.*\.tar\.gz$
 \..*\.swp$
+^\.git/
+^\.gitignore$

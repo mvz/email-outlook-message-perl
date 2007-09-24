@@ -1,13 +1,13 @@
-package Email::MSG;
+package Email::Outlook::Message;
 =head1 NAME
 
-Email::MSG.pm - Convert Outlook .msg files to standard MIME.
+Email::Outlook::Message.pm - Convert Outlook .msg files to standard MIME.
 
 =head1 SYNOPSIS
 
-  use Email::MSG;
+  use Email::Outlook::Message;
 
-  my $msg = new Email::MSG $filename, $verbose;
+  my $msg = new Email::Outlook::Message $filename, $verbose;
   my $mime = $msg->to_email_mime;
   $mime->as_string;
 
