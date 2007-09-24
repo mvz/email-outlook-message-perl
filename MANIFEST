@@ -12,8 +12,6 @@ t/files/plain_uc_unsent.msg
 t/files/plain_unsent.msg
 t/files/rtf_uc_unsent.msg
 t/files/rtf_unsent.msg
-t/files/Test			for MSGConvert.msg
-t/files/Test for MSGConvert.msg
 t/gpg_signed.t
 t/internals.t
 t/plain_unsent.t
