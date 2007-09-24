@@ -118,7 +118,7 @@ oledump.pl - Dump structure of an OLE file.
 
 =head1 SYNOPSIS
 
-msgconvert.pl [options] <file>...
+oledump.pl [options] <file>...
 
   Options:
     --with-data	    dump data too
