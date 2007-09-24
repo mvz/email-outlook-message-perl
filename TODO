@@ -1,22 +1,9 @@
-TODO (Bugs)
-- Solve bug report concerning word file.
-- Process applefiles (using Mac::AppleSingleDouble??)
+TODO
+- Process compressed RTF bodies
+- Process applefiles (using Mac::AppleSingleDouble?)
 - Process gpg-signed mail properly.
-
-TODO (Functional)
-- Think long and hard about class interface
-
-- Do s/t useful with UTF-16 encoded text.
-- Allow more than one file to be specified on the command line
+- Properly handle UTF16 text.
+- Create interface to internal properties.
 - Allow an output file to be specified on the command line
-- (Ongoing...) Make use of more of the items, if possible.
-
-TODO (Technical)
-- Use Email::LocalDelivery::MailBox to write output
-- Use some constants for property codes
-- Refactor some of the if constructs?
-- Read all properties first, then use them when needed? (This is a major
-  change).
-
-TODO (Other)
-- Create neutral test files
+- Make use of more of the items, if possible.
+- Create more test files

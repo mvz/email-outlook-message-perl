@@ -418,6 +418,7 @@ sub _process_attachment_subdirectory {
 #
 # Generic processor for a file entry: Inserts the entry's data into the
 # hash $target, using the $map to find the proper key.
+# TODO: Mapping should probably be applied at a later time instead.
 #
 sub _process_pps_file_entry {
   my ($self, $pps, $target, $map) = @_;

@@ -13,4 +13,4 @@
 \..*\.swp$
 ^\.git/
 ^\.gitignore$
-^oledump\.pl$
+^tools/oledump\.pl$

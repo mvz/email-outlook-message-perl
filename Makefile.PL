@@ -4,7 +4,7 @@ WriteMakefile(
   'NAME'	    => 'MSGConvert',
   'AUTHOR'	    => 'Matijs van Zuijlen',
   'VERSION_FROM'    => 'lib/Email/Outlook/MSG.pm',
-  'EXE_FILES'	    => [ 'msgconvert.pl' ],
+  'EXE_FILES'	    => [ 'tools/msgconvert.pl' ],
   'PREREQ_PM'	=> {
     Carp => 0,
     Date::Format => 0,
