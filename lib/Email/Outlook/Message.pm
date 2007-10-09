@@ -1,7 +1,7 @@
 package Email::Outlook::Message;
 =head1 NAME
 
-Email::Outlook::Message.pm - Convert Outlook .msg files to standard MIME.
+Email::Outlook::Message.pm - Read Outlook .msg files
 
 =head1 SYNOPSIS
 
@@ -13,7 +13,7 @@ Email::Outlook::Message.pm - Convert Outlook .msg files to standard MIME.
 
 =head1 DESCRIPTION
 
-Parses .MSG message files as produced by Microsoft Outlook.
+Parses .msg message files as produced by Microsoft Outlook.
 
 =head1 METHODS
 
@@ -30,7 +30,7 @@ Parses .MSG message files as produced by Microsoft Outlook.
 
 =head1 BUGS
 
-Not all data that's in the .MSG file is converted. There simply are some
+Not all data that's in the .msg file is converted. There simply are some
 parts whose meaning escapes me. Formatting of text messages will also be
 lost. GPG signed mail is not processed correctly.
 
@@ -402,7 +402,7 @@ sub _process_attachment_subdirectory {
   my $name = $self->_get_pps_name($pps);
   my ($property, $encoding) = $self->_parse_item_name($name);
 
-  if ($property eq '3701') {	# Nested MSG file
+  if ($property eq '3701') {	# Nested msg file
     my $msgp = $self->_empty_new();
     $msgp->_set_verbosity($self->{VERBOSE});
     $msgp->_process_root_dir($pps);
@@ -552,7 +552,7 @@ sub _parse_item_name {
   if ($name =~ /^__substg1 0_(....)(....)$/) {
     my ($property, $encoding) = ($1, $2);
     if ($encoding eq ENCODING_UNICODE and not ($self->{HAS_UNICODE})) {
-      warn "This MSG file contains Unicode fields." 
+      warn "This msg file contains Unicode fields." 
 	. " This is currently unsupported.\n";
       $self->{HAS_UNICODE} = 1;
     } elsif (not (KNOWN_ENCODINGS()->{$encoding})) {
@@ -694,7 +694,7 @@ sub _SetHeaderFields {
   $self->_AddHeaderField($mime, 'In-Reply-To', $self->{INREPLYTO});
 
   # Least preferred option to set the Date: header; this uses the date the
-  # MSG file was saved.
+  # msg file was saved.
   $self->_AddHeaderField($mime, 'Date', $self->{OLEDATE});
 
   # Second preferred option: get it from the SUBMISSION_ID:
