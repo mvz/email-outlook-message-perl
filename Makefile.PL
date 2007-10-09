@@ -1,25 +1,20 @@
 use 5.006;
 use ExtUtils::MakeMaker;
 WriteMakefile(
-  'NAME'	    => 'MSGConvert',
+  'NAME'	    => 'Email::Outlook::Message',
   'AUTHOR'	    => 'Matijs van Zuijlen',
-  'VERSION_FROM'    => 'lib/Email/Outlook/MSG.pm',
-  'EXE_FILES'	    => [ 'tools/msgconvert.pl' ],
+  'VERSION_FROM'    => 'lib/Email/Outlook/Message.pm',
   'PREREQ_PM'	=> {
     Carp => 0,
-    Date::Format => 0,
+    Date::Format => 2.22,
     Email::MIME::ContentType => 1.014,
     Email::MIME::Modifier => 1.442,
     Email::MIME::Creator => 1.454,
     Email::Simple => 2.003,
     OLE::Storage_Lite => 0.14,
     POSIX => 0,
-    ## Needed for msgconvert.pl
-    Email::LocalDelivery => 0.217,
     ## These we need for testing
-    Email::MIME::Modifier => 1.441,
     IO::All => 0,
-    MIME::Entity => 0,
     Test::More => 0,
   },
 );

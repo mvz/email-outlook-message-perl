@@ -2,9 +2,9 @@
 use strict;
 use warnings;
 use Test::More tests => 9;
-use Email::Outlook::MSG;
+use Email::Outlook::Message;
 
-my $p = new Email::Outlook::MSG('t/files/plain_unsent.msg');
+my $p = new Email::Outlook::Message('t/files/plain_unsent.msg');
 ok($p, "Parsing succeeded");
 my $m = $p->to_email_mime;
 is(scalar($m->header_names), 7, "Seven headers");

@@ -1,4 +1,4 @@
-^problemfiles/
+^playground/
 ^blib/
 ^t/testsuite/
 ^t/private.t$
