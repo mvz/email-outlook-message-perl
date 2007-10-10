@@ -1,4 +1,9 @@
+0.902	2007-10-10
+
+  - Fix pod coverage testing
+  
 0.901	2007-09-24
 
   - First release as module on CPAN
-  - Extracted main functionality of msgconvert.pl to Email::Outlook::MSG
+  - Extracted main functionality of msgconvert.pl to
+    Email::Outlook::Message

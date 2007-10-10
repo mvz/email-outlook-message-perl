@@ -61,7 +61,7 @@ use constant DIR_TYPE => 1;
 use constant FILE_TYPE => 2;
 
 use vars qw($skipproperties $skipheaders $VERSION);
-$VERSION = "0.901";
+$VERSION = "0.902";
 #
 # Descriptions partially based on mapitags.h
 #
