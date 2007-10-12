@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use Test::More tests => 17;
+use Test::More tests => 18;
 use Email::Outlook::Message;
 #use MIME::Entity;
 use Email::MIME::Creator;
@@ -10,6 +10,7 @@ my $p = Email::Outlook::Message->_empty_new();
 ok($p, 'Checking internal new');
 test_copy_header_data($p);
 test_is_transmittable_property($p);
+test_submission_id_date($p);
 
 # DONE
 
@@ -56,3 +57,10 @@ sub test_is_transmittable_property {
   ok($p->_is_transmittable_property('8000'));
   ok($p->_is_transmittable_property('FFFF'));
 }
+
+sub test_submission_id_date {
+  my $p = shift;
+  $p->{SUBMISSION_ID} = "c=us;a=;p=Something;l=ABCDEFGH1-030728080154Z-268.";
+  is($p->_submission_id_date, "Mon, 28 Jul 2003 08:01:54 +0000");
+}
+

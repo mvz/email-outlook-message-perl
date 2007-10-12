@@ -52,9 +52,8 @@ use Email::Simple;
 use Email::Abstract;
 use Email::MIME::Creator;
 use Email::MIME::ContentType;
-use Date::Format;
 use OLE::Storage_Lite;
-use POSIX qw(mktime);
+use POSIX;
 use Carp;
 
 use constant DIR_TYPE => 1;
@@ -516,26 +515,22 @@ sub _extract_ole_date {
     my $datearr;
     $datearr = $pps->{Time2nd};
     $datearr = $pps->{Time1st} unless($datearr);
-    $self->{OLEDATE} = $self->_FormatDate($datearr) if $datearr;
+    $self->{OLEDATE} = $self->_format_date($datearr) if $datearr;
   }
 }
 
-sub _FormatDate {
+sub _format_date {
   my ($self, $datearr) = @_;
-
-  # TODO: This is a little convoluted. Directly using strftime didn't seem
-  # to work.
-  my $datetime = mktime(@$datearr);
-  return time2str("%a, %d %h %Y %X %z", $datetime);
+  return strftime("%a, %d %h %Y %H:%M:%S +0000", @$datearr);
 }
 
 # If we didn't get the date from the original header data, we may be able
 # to get it from the SUBMISSION_ID:
 # It seems to have the format of a semicolon-separated list of key=value
 # pairs. The key l has a value with the format:
-# <SERVER>-<DATETIME>Z-<NUMBER>, where DATETIME is the date and time in
-# the format YYMMDDHHMMSS.
-sub _SubmissionIdDate {
+# <SERVER>-<DATETIME>Z-<NUMBER>, where DATETIME is the date and time (gmt)
+# in the format YYMMDDHHMMSS.
+sub _submission_id_date {
   my $self = shift;
 
   my $submission_id = $self->{SUBMISSION_ID} or return undef;
@@ -543,7 +538,7 @@ sub _SubmissionIdDate {
     or return undef;
   my $year = $1;
   $year += 100 if $year < 20;
-  return $self->_FormatDate([$6,$5,$4,$3,$2-1,$year]);
+  return $self->_format_date([$6,$5,$4,$3,$2-1,$year]);
 }
 
 sub _parse_item_name {
@@ -698,7 +693,7 @@ sub _SetHeaderFields {
   $self->_AddHeaderField($mime, 'Date', $self->{OLEDATE});
 
   # Second preferred option: get it from the SUBMISSION_ID:
-  $self->_AddHeaderField($mime, 'Date', $self->_SubmissionIdDate());
+  $self->_AddHeaderField($mime, 'Date', $self->_submission_id_date());
 
   # After this, we'll try getting the date from the original headers.
 }
