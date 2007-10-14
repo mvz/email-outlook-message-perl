@@ -506,7 +506,7 @@ sub _get_pps_name {
 }
 
 #
-# Extract time stamp of this OLE item.
+# Extract time stamp of this OLE item (this is in GMT)
 #
 sub _extract_ole_date {
   my ($self, $pps) = @_;
