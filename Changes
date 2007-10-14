@@ -1,3 +1,7 @@
+0.903	2007-10-14
+
+  - Dates from OLE and submission_id are GMT, not local time.
+
 0.902	2007-10-10
 
   - Fix pod coverage testing
