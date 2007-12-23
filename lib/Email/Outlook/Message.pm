@@ -519,9 +519,13 @@ sub _extract_ole_date {
   }
 }
 
+#
+# Format a gmt date according to RFC822
+#
 sub _format_date {
   my ($self, $datearr) = @_;
-  return strftime("%a, %d %h %Y %H:%M:%S +0000", @$datearr);
+  my $day = qw(Sun Mon Tue Wed Thu Fri Sat)[strftime("%w", @$datearr)];
+  return strftime("$day, %d %h %Y %H:%M:%S +0000", @$datearr);
 }
 
 # If we didn't get the date from the original header data, we may be able

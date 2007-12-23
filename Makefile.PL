@@ -6,7 +6,6 @@ WriteMakefile(
   'VERSION_FROM'    => 'lib/Email/Outlook/Message.pm',
   'PREREQ_PM'	=> {
     Carp => 0,
-    Date::Format => 2.22,
     Email::MIME::ContentType => 1.014,
     Email::MIME::Modifier => 1.442,
     Email::MIME::Creator => 1.454,
