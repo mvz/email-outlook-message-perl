@@ -28,6 +28,8 @@ Parses .msg message files as produced by Microsoft Outlook.
 
     Output result as an Email::MIME object.
 
+=back
+
 =head1 BUGS
 
 Not all data that's in the .msg file is converted. There simply are some
