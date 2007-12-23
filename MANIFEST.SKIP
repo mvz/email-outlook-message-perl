@@ -6,6 +6,8 @@
 ^cover_db/
 ^Makefile.old$
 ^Makefile$
+^Build$
+^_build/
 ^MANIFEST.bak$
 ^MANIFEST.SKIP$
 ^mapitags.h$

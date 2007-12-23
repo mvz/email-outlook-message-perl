@@ -1,4 +1,7 @@
 .*.swp
+/Build
+/_build
+/cover_db
 /Makefile
 /Makefile.old
 /blib
