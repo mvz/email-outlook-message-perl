@@ -13,3 +13,4 @@ t/plain_jpeg_attached.t
 t/plain_unsent.t
 t/pod_coverage.t
 TODO
+META.yml

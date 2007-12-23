@@ -1,6 +1,7 @@
 use Module::Build;
 my $build = Module::Build->new (
   module_name => 'Email::Outlook::Message',
+  dist_abstract => 'Read Outlook .msg files',
   license => 'perl',
   requires => {
     'Carp' => '0',
