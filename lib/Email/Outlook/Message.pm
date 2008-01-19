@@ -539,9 +539,9 @@ sub _format_date {
 sub _submission_id_date {
   my $self = shift;
 
-  my $submission_id = $self->{SUBMISSION_ID} or return undef;
+  my $submission_id = $self->{SUBMISSION_ID} or return;
   $submission_id =~ m/l=.*-(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)Z-.*/
-    or return undef;
+    or return;
   my $year = $1;
   $year += 100 if $year < 20;
   return $self->_format_date([$6,$5,$4,$3,$2-1,$year]);
