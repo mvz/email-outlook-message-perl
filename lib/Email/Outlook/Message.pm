@@ -157,14 +157,14 @@ my $skipheaders = {
 
 my $ENCODING_UNICODE = '001F';
 my $KNOWN_ENCODINGS = {
-    '000D' => 'Directory',
-    '001F' => 'Unicode',
-    '001E' => 'Ascii?',
-    '0102' => 'Binary',
+  '000D' => 'Directory',
+  '001F' => 'Unicode',
+  '001E' => 'Ascii?',
+  '0102' => 'Binary',
 };
 
 my $MAP_ATTACHMENT_FILE = {
-  '3701' => ["DATA",	    0], # Data
+  '3701' => ["DATA",        0], # Data
   '3704' => ["SHORTNAME",   1], # Short file name
   '3707' => ["LONGNAME",    1], # Long file name
   '370E' => ["MIMETYPE",    1], # mime type
@@ -173,27 +173,27 @@ my $MAP_ATTACHMENT_FILE = {
 };
 
 my $MAP_SUBITEM_FILE = {
-  '1000' => ["BODY_PLAIN",	1], # Body
-  '1013' => ["BODY_HTML",	1], # HTML Version of body
-  '0037' => ["SUBJECT",		1], # Subject
-  '0047' => ["SUBMISSION_ID",	1], # Seems to contain the date
-  '007D' => ["HEAD",		1], # Full headers
-  '0C1A' => ["FROM",		1], # From: Name
-  '0C1E' => ["FROM_ADDR_TYPE",	1], # From: Address type
-  '0C1F' => ["FROM_ADDR",	1], # From: Address
-  '0E04' => ["TO",		1], # To: Names
-  '0E03' => ["CC",		1], # Cc: Names
-  '1035' => ["MESSAGEID",	1], # Message-Id
-  '1042' => ["INREPLYTO",	1], # In reply to Message-Id
+  '1000' => ["BODY_PLAIN",      1], # Body
+  '1013' => ["BODY_HTML",       1], # HTML Version of body
+  '0037' => ["SUBJECT",         1], # Subject
+  '0047' => ["SUBMISSION_ID",   1], # Seems to contain the date
+  '007D' => ["HEAD",            1], # Full headers
+  '0C1A' => ["FROM",            1], # From: Name
+  '0C1E' => ["FROM_ADDR_TYPE",  1], # From: Address type
+  '0C1F' => ["FROM_ADDR",       1], # From: Address
+  '0E04' => ["TO",              1], # To: Names
+  '0E03' => ["CC",              1], # Cc: Names
+  '1035' => ["MESSAGEID",       1], # Message-Id
+  '1042' => ["INREPLYTO",       1], # In reply to Message-Id
 };
 
 my $MAP_ADDRESSITEM_FILE = {
-  '3001' => ["NAME",		1], # Real name
-  '3002' => ["TYPE",		1], # Address type
-  '403D' => ["TYPE",		1], # Address type
-  '3003' => ["ADDRESS",		1], # Address
-  '403E' => ["ADDRESS",		1], # Address
-  '39FE' => ["SMTPADDRESS",	1], # SMTP Address variant
+  '3001' => ["NAME",            1], # Real name
+  '3002' => ["TYPE",            1], # Address type
+  '403D' => ["TYPE",            1], # Address type
+  '3003' => ["ADDRESS",         1], # Address
+  '403E' => ["ADDRESS",         1], # Address
+  '39FE' => ["SMTPADDRESS",     1], # SMTP Address variant
 };
 
 #
@@ -209,8 +209,8 @@ sub new {
 
   my $msg = OLE::Storage_Lite->new($file);
   my $pps = $msg->getPpsTree(1);
-  $pps or die "Parsing $file as OLE file failed.";
-  $self->_set_verbosity(1) if $verbose;
+  $pps or croak "Parsing $file as OLE file failed.";
+  $self->_set_verbosity($verbose);
   $self->_process_root_dir($pps);
 
   return $self;
@@ -285,8 +285,7 @@ sub to_email_mime {
 
 sub _set_verbosity {
   my ($self, $verbosity) = @_;
-  defined $verbosity or die "Internal error: no verbosity level";
-  $self->{VERBOSE} = $verbosity;
+  $self->{VERBOSE} = $verbosity ? 1 : 0;
   return;
 }
 
@@ -322,7 +321,7 @@ sub _process_root_dir {
     } elsif ($child->{Type} == $FILE_TYPE) {
       $self->_process_pps_file_entry($child, $self, $MAP_SUBITEM_FILE);
     } else {
-      warn "Unknown entry type: $child->{Type}";
+      carp "Unknown entry type: $child->{Type}";
     }
   }
   return;
@@ -338,7 +337,7 @@ sub _process_subdirectory {
 
   my $name = $self->_get_pps_name($pps);
 
-  if ($name =~ /__recip_version1 0_ /) { # Address of one recipient
+  if ($name =~ '__recip_version1 0_ ') { # Address of one recipient
     $self->_process_address($pps);
   } elsif ($name =~ '__attach_version1 0_ ') { # Attachment
     $self->_process_attachment($pps);
@@ -362,7 +361,7 @@ sub _process_address {
     } elsif ($child->{Type} == $FILE_TYPE) {
       $self->_process_pps_file_entry($child, $addr_info, $MAP_ADDRESSITEM_FILE);
     } else {
-      warn "Unknown entry type: $child->{Type}";
+      carp "Unknown entry type: $child->{Type}";
     }
   }
   push @{$self->{ADDRESSES}}, $addr_info;
@@ -376,13 +375,13 @@ sub _process_attachment {
   my ($self, $pps) = @_;
 
   my $attachment = {
-    SHORTNAME	=> undef,
-    LONGNAME	=> undef,
-    MIMETYPE	=> 'application/octet-stream',
-    ENCODING	=> 'base64',
-    DISPOSITION	=> 'attachment',
-    CONTENTID	=> undef,
-    DATA	=> undef,
+    SHORTNAME   => undef,
+    LONGNAME    => undef,
+    MIMETYPE    => 'application/octet-stream',
+    ENCODING    => 'base64',
+    DISPOSITION => 'attachment',
+    CONTENTID   => undef,
+    DATA        => undef,
   };
   foreach my $child (@{$pps->{Child}}) {
     if ($child->{Type} == $DIR_TYPE) {
@@ -390,7 +389,7 @@ sub _process_attachment {
     } elsif ($child->{Type} == $FILE_TYPE) {
       $self->_process_pps_file_entry($child, $attachment, $MAP_ATTACHMENT_FILE);
     } else {
-      warn "Unknown entry type: $child->{Type}";
+      carp "Unknown entry type: $child->{Type}";
     }
   }
   if ($attachment->{MIMETYPE} eq 'multipart/signed') {
@@ -408,7 +407,7 @@ sub _process_attachment_subdirectory {
   my $name = $self->_get_pps_name($pps);
   my ($property, $encoding) = $self->_parse_item_name($name);
 
-  if ($property eq '3701') {	# Nested msg file
+  if ($property eq '3701') { # Nested msg file
     my $msgp = $self->_empty_new();
     $msgp->_set_verbosity($self->{VERBOSE});
     $msgp->_process_root_dir($pps);
