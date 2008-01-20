@@ -287,11 +287,12 @@ sub _set_verbosity {
   my ($self, $verbosity) = @_;
   defined $verbosity or die "Internal error: no verbosity level";
   $self->{VERBOSE} = $verbosity;
+  return;
 }
 
 #
 # Below are functions that walk the PPS tree. The *_dir functions handle
-# processing the directory nodes of the tree (mainly, iterating over the
+# processing the directory nodes of the tree mainly, iterating over the
 # children), whereas the *Item functions handle processing the items in the
 # directory (if such an item is itself a directory, it will in turn be
 # processed by the relevant *_dir function).
@@ -324,6 +325,7 @@ sub _process_root_dir {
       warn "Unknown entry type: $child->{Type}";
     }
   }
+  return;
 }
 
 #
@@ -343,6 +345,7 @@ sub _process_subdirectory {
   } else {
     $self->_warn_about_unknown_directory($pps);
   }
+  return;
 }
 
 #
@@ -363,6 +366,7 @@ sub _process_address {
     }
   }
   push @{$self->{ADDRESSES}}, $addr_info;
+  return;
 }
 
 #
@@ -393,6 +397,7 @@ sub _process_attachment {
     $attachment->{ENCODING} = '8bit';
   }
   push @{$self->{ATTACHMENTS}}, $attachment;
+  return;
 }
 
 #
@@ -414,6 +419,7 @@ sub _process_attachment_subdirectory {
   } else {
     $self->_warn_about_unknown_directory($pps);
   }
+  return;
 }
 
 #
@@ -438,6 +444,7 @@ sub _process_pps_file_entry {
   } else {
     $self->_warn_about_unknown_file($pps);
   }
+  return;
 }
 
 sub _warn_about_unknown_directory {
@@ -447,9 +454,10 @@ sub _warn_about_unknown_directory {
   if ($name eq '__nameid_version1 0') {
     $self->{VERBOSE}
       and warn "Skipping DIR entry $name (Introductory stuff)\n";
-    return;
+  } else {
+    warn "Unknown DIR entry $name\n";
   }
-  warn "Unknown DIR entry $name\n";
+  return;
 }
 
 sub _warn_about_unknown_file {
@@ -485,6 +493,7 @@ sub _warn_about_unknown_file {
   } else {
     warn "Unknown property $property\n";
   }
+  return;
 }
 
 #
@@ -519,6 +528,7 @@ sub _extract_ole_date {
     $datearr = $pps->{Time1st} unless($datearr);
     $self->{OLEDATE} = $self->_format_date($datearr) if $datearr;
   }
+  return;
 }
 
 #
@@ -582,6 +592,7 @@ sub _SaveAttachment {
     body => $att->{DATA});
   $self->_clean_part_header($m);
   $mime->parts_add([$m]);
+  return;
 }
 
 # Set header fields
@@ -591,6 +602,7 @@ sub _AddHeaderField {
   #my $oldvalue = $mime->header($fieldname);
   #return if $oldvalue;
   $mime->header_set($fieldname, $value) if $value;
+  return;
 }
 
 sub _Address {
@@ -640,6 +652,7 @@ sub _clean_part_header {
   unless ($part->content_type =~ /^multipart\//) {
     $part->header_set('MIME-Version')
   };
+  return;
 }
 
 sub _create_mime_plain_body {
@@ -680,6 +693,7 @@ sub _copy_header_data {
   foreach my $tag (grep { !$skipheaders->{uc $_}} $parsed->header_names) {
     $mime->header_set($tag, $parsed->header($tag));
   }
+  return;
 }
 
 # Set header fields
@@ -702,5 +716,7 @@ sub _SetHeaderFields {
   $self->_AddHeaderField($mime, 'Date', $self->_submission_id_date());
 
   # After this, we'll try getting the date from the original headers.
+  return;
 }
 
+1;
