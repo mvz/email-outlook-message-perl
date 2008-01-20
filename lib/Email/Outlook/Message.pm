@@ -58,15 +58,15 @@ use OLE::Storage_Lite;
 use POSIX;
 use Carp;
 
-use constant DIR_TYPE => 1;
-use constant FILE_TYPE => 2;
+my $DIR_TYPE = 1;
+my $FILE_TYPE = 2;
 
-use vars qw($skipproperties $skipheaders $VERSION);
+use vars qw($VERSION);
 $VERSION = "0.903";
 #
 # Descriptions partially based on mapitags.h
 #
-$skipproperties = {
+my $skipproperties = {
   # Envelope properties
   '000B' => "Conversation key?",
   '001A' => "Type of message",
@@ -144,7 +144,7 @@ $skipproperties = {
   '8002' => "Unknown, binary data",
 };
 
-$skipheaders = {
+my $skipheaders = {
   map { uc($_) => 1 } 
   "MIME-Version",
   "Content-Type",
@@ -155,15 +155,15 @@ $skipheaders = {
   "X-MS-Has-Attach"
 };
 
-use constant ENCODING_UNICODE => '001F';
-use constant KNOWN_ENCODINGS => {
+my $ENCODING_UNICODE = '001F';
+my $KNOWN_ENCODINGS = {
     '000D' => 'Directory',
     '001F' => 'Unicode',
     '001E' => 'Ascii?',
     '0102' => 'Binary',
 };
 
-use constant MAP_ATTACHMENT_FILE => {
+my $MAP_ATTACHMENT_FILE = {
   '3701' => ["DATA",	    0], # Data
   '3704' => ["SHORTNAME",   1], # Short file name
   '3707' => ["LONGNAME",    1], # Long file name
@@ -172,7 +172,7 @@ use constant MAP_ATTACHMENT_FILE => {
   '3716' => ["DISPOSITION", 1], # disposition
 };
 
-use constant MAP_SUBITEM_FILE => {
+my $MAP_SUBITEM_FILE = {
   '1000' => ["BODY_PLAIN",	1], # Body
   '1013' => ["BODY_HTML",	1], # HTML Version of body
   '0037' => ["SUBJECT",		1], # Subject
@@ -187,7 +187,7 @@ use constant MAP_SUBITEM_FILE => {
   '1042' => ["INREPLYTO",	1], # In reply to Message-Id
 };
 
-use constant MAP_ADDRESSITEM_FILE => {
+my $MAP_ADDRESSITEM_FILE = {
   '3001' => ["NAME",		1], # Real name
   '3002' => ["TYPE",		1], # Address type
   '403D' => ["TYPE",		1], # Address type
@@ -317,10 +317,10 @@ sub _process_root_dir {
   my ($self, $pps) = @_;
 
   foreach my $child (@{$pps->{Child}}) {
-    if ($child->{Type} == DIR_TYPE) {
+    if ($child->{Type} == $DIR_TYPE) {
       $self->_process_subdirectory($child);
-    } elsif ($child->{Type} == FILE_TYPE) {
-      $self->_process_pps_file_entry($child, $self, MAP_SUBITEM_FILE);
+    } elsif ($child->{Type} == $FILE_TYPE) {
+      $self->_process_pps_file_entry($child, $self, $MAP_SUBITEM_FILE);
     } else {
       warn "Unknown entry type: $child->{Type}";
     }
@@ -357,10 +357,10 @@ sub _process_address {
   my $addr_info = { NAME => undef, ADDRESS => undef, TYPE => "" };
 
   foreach my $child (@{$pps->{Child}}) {
-    if ($child->{Type} == DIR_TYPE) {
+    if ($child->{Type} == $DIR_TYPE) {
       $self->_warn_about_unknown_directory($child); # DIR Entries: There should be none.
-    } elsif ($child->{Type} == FILE_TYPE) {
-      $self->_process_pps_file_entry($child, $addr_info, MAP_ADDRESSITEM_FILE);
+    } elsif ($child->{Type} == $FILE_TYPE) {
+      $self->_process_pps_file_entry($child, $addr_info, $MAP_ADDRESSITEM_FILE);
     } else {
       warn "Unknown entry type: $child->{Type}";
     }
@@ -385,10 +385,10 @@ sub _process_attachment {
     DATA	=> undef,
   };
   foreach my $child (@{$pps->{Child}}) {
-    if ($child->{Type} == DIR_TYPE) {
+    if ($child->{Type} == $DIR_TYPE) {
       $self->_process_attachment_subdirectory($child, $attachment);
-    } elsif ($child->{Type} == FILE_TYPE) {
-      $self->_process_pps_file_entry($child, $attachment, MAP_ATTACHMENT_FILE);
+    } elsif ($child->{Type} == $FILE_TYPE) {
+      $self->_process_pps_file_entry($child, $attachment, $MAP_ATTACHMENT_FILE);
     } else {
       warn "Unknown entry type: $child->{Type}";
     }
@@ -562,11 +562,11 @@ sub _parse_item_name {
 
   if ($name =~ /^__substg1 0_(....)(....)$/) {
     my ($property, $encoding) = ($1, $2);
-    if ($encoding eq ENCODING_UNICODE and not ($self->{HAS_UNICODE})) {
+    if ($encoding eq $ENCODING_UNICODE and not ($self->{HAS_UNICODE})) {
       warn "This msg file contains Unicode fields." 
 	. " This is currently unsupported.\n";
       $self->{HAS_UNICODE} = 1;
-    } elsif (not (KNOWN_ENCODINGS()->{$encoding})) {
+    } elsif (not $KNOWN_ENCODINGS->{$encoding}) {
       warn "Unknown encoding $encoding. Results may be strange or wrong.\n";
     }
     return ($property, $encoding);
