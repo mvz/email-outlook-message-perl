@@ -145,7 +145,7 @@ my $skipproperties = {
 };
 
 my $skipheaders = {
-  map { uc($_) => 1 } 
+  map { uc($_) => 1 }
   "MIME-Version",
   "Content-Type",
   "Content-Transfer-Encoding",
@@ -562,7 +562,7 @@ sub _parse_item_name {
   if ($name =~ /^__substg1 0_(....)(....)$/) {
     my ($property, $encoding) = ($1, $2);
     if ($encoding eq $ENCODING_UNICODE and not ($self->{HAS_UNICODE})) {
-      warn "This msg file contains Unicode fields." 
+      warn "This msg file contains Unicode fields."
 	. " This is currently unsupported.\n";
       $self->{HAS_UNICODE} = 1;
     } elsif (not $KNOWN_ENCODINGS->{$encoding}) {
