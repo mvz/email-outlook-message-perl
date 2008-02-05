@@ -461,7 +461,7 @@ sub _process_pps_file_entry {
   my ($property, $encoding) = $self->_parse_item_name($name);
 
   if (defined $property) {
-    $target->{_pps_file_entries}->{$property} = [$encoding, $pps->{Data}];
+    $target->_set_property($property, [$encoding, $pps->{Data}]);
   } else {
     $self->_warn_about_unknown_file($pps);
   }
@@ -471,10 +471,8 @@ sub _process_pps_file_entry {
 sub _check_pps_file_entries {
   my ($self, $target, $map) = @_;
 
-  my $entries = $target->{_pps_file_entries};
-
-  foreach my $property (keys %$entries) {
-    my ($encoding, $data) = @{$entries->{$property}};
+  foreach my $property ($target->property_names) {
+    my ($encoding, $data) = @{$target->get_property($property)};
     if (my $arr = $map->{$property}) {
       # FIXME: This probably messes up unicode processing.
       if ($arr->[1]) {
