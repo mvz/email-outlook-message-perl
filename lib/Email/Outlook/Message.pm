@@ -493,29 +493,8 @@ sub _warn_about_unknown_file {
       or $name eq 'Olk10SideProps_0001') {
     $self->{VERBOSE}
       and warn "Skipping FILE entry $name (Properties)\n";
-    return;
-  }
-
-  # FIXME: encoding not used.
-  my ($property, $encoding) = $self->_parse_item_name($name);
-  unless (defined $property) {
-    warn "Unknown FILE entry $name\n";
-    return;
-  }
-  if ($skipproperties->{$property}) {
-    $self->{VERBOSE}
-      and warn "Skipping property $property ($skipproperties->{$property})\n";
-  } elsif (not $self->_is_transmittable_property($property)) {
-    $self->{VERBOSE}
-      and warn "Skipping property $property (non-transmittable property)\n";
-  } elsif ($property =~ /^80/) {
-    $self->{VERBOSE}
-      and warn "Skipping property $property (user-defined property)\n";
-  } elsif ($pps->{Data} eq "") {
-    $self->{VERBOSE}
-      and warn "Unknown property $property (no data)\n";
   } else {
-    warn "Unknown property $property\n";
+    warn "Unknown FILE entry $name\n";
   }
   return;
 }
