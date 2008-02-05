@@ -443,14 +443,7 @@ sub _process_pps_file_entry {
   my $name = $self->_get_pps_name($pps);
   my ($property, $encoding) = $self->_parse_item_name($name);
 
-  if (defined $property and my $arr = $map->{$property}) {
-    my $data = $pps->{Data};
-    # FIXME: This probably messes up unicode processing.
-    if ($arr->[1]) {
-      $data =~ s/\000$//sg;
-      $data =~ s/\r\n/\n/sg;
-    }
-    $target->{$arr->[0]} = $data;
+  if (defined $property) {
     $target->{_pps_file_entries}->{$property} = [$encoding, $pps->{Data}];
   } else {
     $self->_warn_about_unknown_file($pps);
@@ -465,15 +458,13 @@ sub _check_pps_file_entries {
 
   foreach my $property (keys %$entries) {
     my ($encoding, $data) = @{$entries->{$property}};
-    if (defined $property and my $arr = $map->{$property}) {
+    if (my $arr = $map->{$property}) {
       # FIXME: This probably messes up unicode processing.
       if ($arr->[1]) {
 	$data =~ s/\000$//sg;
 	$data =~ s/\r\n/\n/sg;
       }
-      unless ($target->{$arr->[0]} eq $data) {
-	warn "Not equal: $target->{$arr->[0]}, $data";
-      }
+      $target->{$arr->[0]} = $data;
     } else {
       $self->_warn_about_skipped_property($property, $data);
     }
