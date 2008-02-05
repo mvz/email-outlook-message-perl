@@ -201,11 +201,11 @@ my $MAP_ADDRESSITEM_FILE = {
 #
 
 sub new {
-  my $that = shift;
+  my $class = shift;
   my $file = shift or croak "File name is required parameter";
   my $verbose = shift;
 
-  my $self = $that->_empty_new;
+  my $self = $class->_empty_new;
 
   my $msg = OLE::Storage_Lite->new($file);
   my $pps = $msg->getPpsTree(1);
@@ -217,8 +217,7 @@ sub new {
 }
 
 sub _empty_new {
-  my $that = shift;
-  my $class = ref $that || $that;
+  my $class = shift;
 
   return bless {
     ADDRESSES => [], ATTACHMENTS => [], FROM_ADDR_TYPE => "",
@@ -408,7 +407,7 @@ sub _process_attachment_subdirectory {
   my ($property, $encoding) = $self->_parse_item_name($name);
 
   if ($property eq '3701') { # Nested msg file
-    my $msgp = $self->_empty_new();
+    my $msgp = ref($self)->_empty_new();
     $msgp->_set_verbosity($self->{VERBOSE});
     $msgp->_process_root_dir($pps);
 
