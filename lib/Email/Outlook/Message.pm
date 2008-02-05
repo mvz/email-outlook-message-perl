@@ -1,3 +1,26 @@
+package Email::Outlook::Message::Base;
+sub new {
+  my $class = shift;
+  return bless {_pps_file_entries => {}}, $self;
+}
+
+sub property_names {
+  my $self = shift;
+  return keys %{$self->{_pps_file_entries}};
+}
+
+sub get_property {
+  my ($self, $name) = @_;
+  return $self->{_pps_file_entries}->{$name};
+}
+
+sub _set_property {
+  my ($self, $name, $data) = @_;
+  $self->{_pps_file_entries}->{$name} = $data;
+  return;
+}
+
+1;
 package Email::Outlook::Message;
 =head1 NAME
 
@@ -56,6 +79,7 @@ use Email::MIME::ContentType;
 use OLE::Storage_Lite;
 use POSIX;
 use Carp;
+use base 'Email::Outlook::Message::Base';
 
 my $DIR_TYPE = 1;
 my $FILE_TYPE = 2;

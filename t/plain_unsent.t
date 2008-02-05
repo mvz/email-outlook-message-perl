@@ -1,10 +1,12 @@
 use strict;
 use warnings;
-use Test::More tests => 9;
+use Test::More tests => 10;
 use Email::Outlook::Message;
 
 my $p = new Email::Outlook::Message('t/files/plain_unsent.msg');
 ok($p, "Parsing succeeded");
+like($p->get_property('1000')->[1], qr/This is a test..The body is in plain text/s);
+
 my $m = $p->to_email_mime;
 is(scalar($m->header_names), 7, "Seven headers");
 like($m->content_type, qr{^text/plain}, "Content type should be text/plain");
