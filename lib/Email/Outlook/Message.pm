@@ -189,9 +189,9 @@ my $MAP_SUBITEM_FILE = {
 my $MAP_ADDRESSITEM_FILE = {
   '3001' => ["NAME",            1], # Real name
   '3002' => ["TYPE",            1], # Address type
-  '403D' => ["TYPE",            1], # Address type
+  '403D' => ["TYPE2",            1], # Address type TODO: Not used
   '3003' => ["ADDRESS",         1], # Address
-  '403E' => ["ADDRESS",         1], # Address
+  '403E' => ["ADDRESS2",         1], # Address TODO: Not used
   '39FE' => ["SMTPADDRESS",     1], # SMTP Address variant
 };
 
