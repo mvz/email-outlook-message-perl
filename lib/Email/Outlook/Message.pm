@@ -289,11 +289,9 @@ sub _set_verbosity {
 }
 
 #
-# Below are functions that walk the PPS tree. The *_dir functions handle
-# processing the directory nodes of the tree mainly, iterating over the
-# children), whereas the *Item functions handle processing the items in the
-# directory (if such an item is itself a directory, it will in turn be
-# processed by the relevant *_dir function).
+# Below are functions that walk the PPS tree. This is simply a tree walk.
+# It's not really recursive (except when an attachment contains a .msg
+# file), since the tree is shallow (max. 1 subdirectory deep).
 #
 # The structure is as follows:
 #
@@ -302,7 +300,7 @@ sub _set_verbosity {
 #   Dirs containting adresses
 #     Items with properties of the address
 #   Dirs containing Attachments
-#     Items with properties of the attachment (inlcluding its data)
+#     Items with properties of the attachment (including its data)
 #     Dir that is itself a .msg file (if the attachment is an email).
 #
 
