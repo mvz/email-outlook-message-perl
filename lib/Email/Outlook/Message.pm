@@ -316,7 +316,7 @@ sub _process_root_dir {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_process_subdirectory($child);
     } elsif ($child->{Type} == $FILE_TYPE) {
-      $self->_process_pps_file_entry($child, $self, $MAP_SUBITEM_FILE);
+      $self->_process_pps_file_entry($child, $self);
     } else {
       carp "Unknown entry type: $child->{Type}";
     }
@@ -367,7 +367,7 @@ sub _process_address {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_warn_about_unknown_directory($child); # DIR Entries: There should be none.
     } elsif ($child->{Type} == $FILE_TYPE) {
-      $self->_process_pps_file_entry($child, $addr_info, $MAP_ADDRESSITEM_FILE);
+      $self->_process_pps_file_entry($child, $addr_info);
     } else {
       carp "Unknown entry type: $child->{Type}";
     }
@@ -397,7 +397,7 @@ sub _process_attachment {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_process_attachment_subdirectory($child, $attachment);
     } elsif ($child->{Type} == $FILE_TYPE) {
-      $self->_process_pps_file_entry($child, $attachment, $MAP_ATTACHMENT_FILE);
+      $self->_process_pps_file_entry($child, $attachment);
     } else {
       carp "Unknown entry type: $child->{Type}";
     }
@@ -435,10 +435,9 @@ sub _process_attachment_subdirectory {
 #
 # Generic processor for a file entry: Inserts the entry's data into the
 # hash $target, using the $map to find the proper key.
-# TODO: Mapping should probably be applied at a later time instead.
 #
 sub _process_pps_file_entry {
-  my ($self, $pps, $target, $map) = @_;
+  my ($self, $pps, $target) = @_;
 
   my $name = $self->_get_pps_name($pps);
   my ($property, $encoding) = $self->_parse_item_name($name);
