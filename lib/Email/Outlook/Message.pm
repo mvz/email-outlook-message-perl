@@ -1,7 +1,7 @@
 package Email::Outlook::Message::Base;
 sub new {
   my $class = shift;
-  return bless {_pps_file_entries => {}}, $self;
+  return bless {_pps_file_entries => {}}, $class;
 }
 
 sub property_names {
@@ -20,7 +20,21 @@ sub _set_property {
   return;
 }
 
-1;
+package Email::Outlook::Message::AddressInfo;
+use base Email::Outlook::Message::Base;
+
+package Email::Outlook::Message::Attachment;
+use base Email::Outlook::Message::Base;
+sub new {
+  my $class = shift;
+  my $self = $class->SUPER::new;
+  bless $self, $class;
+  $self->{MIMETYPE} = 'application/octet-stream';
+  $self->{ENCODING} = 'base64';
+  $self->{DISPOSITION} = 'attachment';
+  return $self;
+}
+
 package Email::Outlook::Message;
 =head1 NAME
 
@@ -335,7 +349,6 @@ sub _set_verbosity {
 sub _process_root_dir {
   my ($self, $pps) = @_;
 
-  $self->_prepare_pps_file_entries($self);
   foreach my $child (@{$pps->{Child}}) {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_process_subdirectory($child);
@@ -346,15 +359,6 @@ sub _process_root_dir {
     }
   }
   $self->_check_pps_file_entries($self, $MAP_SUBITEM_FILE);
-  return;
-}
-
-sub _prepare_pps_file_entries {
-  my ($self, $it) = @_;
-  if (exists $it->{_pps_file_entries}) {
-    croak "File entries unexpectedly exist";
-  }
-  $it->{_pps_file_entries} = {};
   return;
 }
 
@@ -384,9 +388,8 @@ sub _process_subdirectory {
 sub _process_address {
   my ($self, $pps) = @_;
 
-  my $addr_info = { NAME => undef, ADDRESS => undef, TYPE => "" };
+  my $addr_info = new Email::Outlook::Message::AddressInfo;
 
-  $self->_prepare_pps_file_entries($addr_info);
   foreach my $child (@{$pps->{Child}}) {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_warn_about_unknown_directory($child); # DIR Entries: There should be none.
@@ -407,16 +410,7 @@ sub _process_address {
 sub _process_attachment {
   my ($self, $pps) = @_;
 
-  my $attachment = {
-    SHORTNAME   => undef,
-    LONGNAME    => undef,
-    MIMETYPE    => 'application/octet-stream',
-    ENCODING    => 'base64',
-    DISPOSITION => 'attachment',
-    CONTENTID   => undef,
-    DATA        => undef,
-  };
-  $self->_prepare_pps_file_entries($attachment);
+  my $attachment = new Email::Outlook::Message::Attachment;
   foreach my $child (@{$pps->{Child}}) {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_process_attachment_subdirectory($child, $attachment);
