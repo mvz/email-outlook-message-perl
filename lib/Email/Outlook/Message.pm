@@ -311,6 +311,7 @@ sub _set_verbosity {
 sub _process_root_dir {
   my ($self, $pps) = @_;
 
+  $self->_prepare_pps_file_entries($self);
   foreach my $child (@{$pps->{Child}}) {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_process_subdirectory($child);
@@ -320,6 +321,16 @@ sub _process_root_dir {
       carp "Unknown entry type: $child->{Type}";
     }
   }
+  $self->_check_pps_file_entries($self, $MAP_SUBITEM_FILE);
+  return;
+}
+
+sub _prepare_pps_file_entries {
+  my ($self, $it) = @_;
+  if (exists $it->{_pps_file_entries}) {
+    croak "File entries unexpectedly exist";
+  }
+  $it->{_pps_file_entries} = {};
   return;
 }
 
@@ -351,6 +362,7 @@ sub _process_address {
 
   my $addr_info = { NAME => undef, ADDRESS => undef, TYPE => "" };
 
+  $self->_prepare_pps_file_entries($addr_info);
   foreach my $child (@{$pps->{Child}}) {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_warn_about_unknown_directory($child); # DIR Entries: There should be none.
@@ -360,6 +372,7 @@ sub _process_address {
       carp "Unknown entry type: $child->{Type}";
     }
   }
+  $self->_check_pps_file_entries($addr_info, $MAP_ADDRESSITEM_FILE);
   push @{$self->{ADDRESSES}}, $addr_info;
   return;
 }
@@ -379,6 +392,7 @@ sub _process_attachment {
     CONTENTID   => undef,
     DATA        => undef,
   };
+  $self->_prepare_pps_file_entries($attachment);
   foreach my $child (@{$pps->{Child}}) {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_process_attachment_subdirectory($child, $attachment);
@@ -388,6 +402,7 @@ sub _process_attachment {
       carp "Unknown entry type: $child->{Type}";
     }
   }
+  $self->_check_pps_file_entries($attachment, $MAP_ATTACHMENT_FILE);
   if ($attachment->{MIMETYPE} eq 'multipart/signed') {
     $attachment->{ENCODING} = '8bit';
   }
@@ -436,10 +451,33 @@ sub _process_pps_file_entry {
       $data =~ s/\r\n/\n/sg;
     }
     $target->{$arr->[0]} = $data;
+    $target->{_pps_file_entries}->{$property} = [$encoding, $pps->{Data}];
   } else {
     $self->_warn_about_unknown_file($pps);
   }
   return;
+}
+
+sub _check_pps_file_entries {
+  my ($self, $target, $map) = @_;
+
+  my $entries = $target->{_pps_file_entries};
+
+  foreach my $property (keys %$entries) {
+    my ($encoding, $data) = @{$entries->{$property}};
+    if (defined $property and my $arr = $map->{$property}) {
+      # FIXME: This probably messes up unicode processing.
+      if ($arr->[1]) {
+	$data =~ s/\000$//sg;
+	$data =~ s/\r\n/\n/sg;
+      }
+      unless ($target->{$arr->[0]} eq $data) {
+	warn "Not equal: $target->{$arr->[0]}, $data";
+      }
+    } else {
+      $self->_warn_about_skipped_property($property, $data);
+    }
+  }
 }
 
 sub _warn_about_unknown_directory {
@@ -483,6 +521,27 @@ sub _warn_about_unknown_file {
     $self->{VERBOSE}
       and warn "Skipping property $property (user-defined property)\n";
   } elsif ($pps->{Data} eq "") {
+    $self->{VERBOSE}
+      and warn "Unknown property $property (no data)\n";
+  } else {
+    warn "Unknown property $property\n";
+  }
+  return;
+}
+
+sub _warn_about_skipped_property {
+  my ($self, $property, $data) = @_;
+
+  if ($skipproperties->{$property}) {
+    $self->{VERBOSE}
+      and warn "Skipping property $property ($skipproperties->{$property})\n";
+  } elsif (not $self->_is_transmittable_property($property)) {
+    $self->{VERBOSE}
+      and warn "Skipping property $property (non-transmittable property)\n";
+  } elsif ($property =~ /^80/) {
+    $self->{VERBOSE}
+      and warn "Skipping property $property (user-defined property)\n";
+  } elsif ($data eq "") {
     $self->{VERBOSE}
       and warn "Unknown property $property (no data)\n";
   } else {
