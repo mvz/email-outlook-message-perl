@@ -248,6 +248,7 @@ sub new {
   my $pps = $msg->getPpsTree(1);
   $pps or croak "Parsing $file as OLE file failed.";
   $self->_set_verbosity($verbose);
+  # TODO: Use separate object as parser?
   $self->_process_root_dir($pps);
 
   return $self;
