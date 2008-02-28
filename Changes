@@ -1,3 +1,10 @@
+0.904	2008-02-28
+
+  - Remove spurious loading of Email::Abstract
+  - Code, comment and pod cleanups
+  - Use Build.PL instead of Makefile.PL for building
+  - Correct, locale independent, date formatting
+
 0.903	2007-10-14
 
   - Dates from OLE and submission_id are GMT, not local time.
