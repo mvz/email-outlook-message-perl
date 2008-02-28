@@ -51,7 +51,6 @@ it under the same terms as Perl itself.
 use strict;
 use warnings;
 use Email::Simple;
-use Email::Abstract;
 use Email::MIME::Creator;
 use Email::MIME::ContentType;
 use OLE::Storage_Lite;
