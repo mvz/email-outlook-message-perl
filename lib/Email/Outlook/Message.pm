@@ -532,7 +532,8 @@ sub _extract_ole_date {
 sub _format_date {
   my ($self, $datearr) = @_;
   my $day = qw(Sun Mon Tue Wed Thu Fri Sat)[strftime("%w", @$datearr)];
-  return strftime("$day, %d %h %Y %H:%M:%S +0000", @$datearr);
+  my $month = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)[strftime("%m", @$datearr) - 1];
+  return strftime("$day, %d $month %Y %H:%M:%S +0000", @$datearr);
 }
 
 # If we didn't get the date from the original header data, we may be able
