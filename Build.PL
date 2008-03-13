@@ -3,6 +3,7 @@ my $build = Module::Build->new (
   module_name => 'Email::Outlook::Message',
   dist_abstract => 'Read Outlook .msg files',
   license => 'perl',
+  create_makefile_pl => 'traditional',
   requires => {
     'Carp' => '0',
     'Email::MIME::ContentType' => '1.014',
