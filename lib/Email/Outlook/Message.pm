@@ -208,7 +208,7 @@ sub new {
 
   my $msg = OLE::Storage_Lite->new($file);
   my $pps = $msg->getPpsTree(1);
-  $pps or croak "Parsing $file as OLE file failed.";
+  $pps or croak "Parsing $file as OLE file failed";
   $self->_set_verbosity($verbose);
   $self->_process_root_dir($pps);
 
