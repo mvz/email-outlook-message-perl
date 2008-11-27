@@ -55,6 +55,7 @@ use Email::MIME::Creator;
 use Email::MIME::ContentType;
 use OLE::Storage_Lite;
 use POSIX;
+use Encode;
 use Carp;
 
 my $DIR_TYPE = 1;
@@ -430,8 +431,10 @@ sub _process_pps_file_entry {
 
   if (defined $property and my $arr = $map->{$property}) {
     my $data = $pps->{Data};
-    # FIXME: This probably messes up unicode processing.
     if ($arr->[1]) {
+      if ($encoding eq $ENCODING_UNICODE) {
+	$data = decode("UTF-16LE", $data);
+      }
       $data =~ s/\000$//sg;
       $data =~ s/\r\n/\n/sg;
     }
@@ -559,8 +562,6 @@ sub _parse_item_name {
   if ($name =~ /^__substg1 0_(....)(....)$/) {
     my ($property, $encoding) = ($1, $2);
     if ($encoding eq $ENCODING_UNICODE and not ($self->{HAS_UNICODE})) {
-      warn "This msg file contains Unicode fields."
-	. " This is currently unsupported.\n";
       $self->{HAS_UNICODE} = 1;
     } elsif (not $KNOWN_ENCODINGS->{$encoding}) {
       warn "Unknown encoding $encoding. Results may be strange or wrong.\n";

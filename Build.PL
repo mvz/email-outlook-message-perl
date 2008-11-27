@@ -12,6 +12,7 @@ my $build = Module::Build->new (
     'Email::Simple' => '2.003',
     'OLE::Storage_Lite' => '0.14',
     'POSIX' => '0',
+    'Encode' => '0',
     ## These we need for testing
     'IO::All' => '0',
     'Test::More' => '0',
