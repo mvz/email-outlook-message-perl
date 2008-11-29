@@ -98,16 +98,15 @@ sub _warn_about_unknown_file {
 
 #
 # Generic processor for a file entry: Inserts the entry's data into the
-# hash $target, using the $map to find the proper key.
+# $self's mapi property list.
 #
 sub _process_pps_file_entry {
-  my ($self, $pps, $target) = @_;
-
+  my ($self, $pps) = @_;
   my $name = $self->_get_pps_name($pps);
   my ($property, $encoding) = $self->_parse_item_name($name);
 
   if (defined $property) {
-    $target->set_mapi_property($property, [$encoding, $pps->{Data}]);
+    $self->set_mapi_property($property, [$encoding, $pps->{Data}]);
   } else {
     $self->_warn_about_unknown_file($pps);
   }
@@ -126,7 +125,7 @@ sub _process_pps {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_warn_about_unknown_directory($child); # DIR Entries: There should be none.
     } elsif ($child->{Type} == $FILE_TYPE) {
-      $self->_process_pps_file_entry($child, $self);
+      $self->_process_pps_file_entry($child);
     } else {
       carp "Unknown entry type: $child->{Type}";
     }
@@ -457,7 +456,7 @@ sub _process_root_dir {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_process_subdirectory($child);
     } elsif ($child->{Type} == $FILE_TYPE) {
-      $self->_process_pps_file_entry($child, $self);
+      $self->_process_pps_file_entry($child);
     } else {
       carp "Unknown entry type: $child->{Type}";
     }
@@ -510,7 +509,7 @@ sub _process_attachment {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_process_attachment_subdirectory($child, $attachment);
     } elsif ($child->{Type} == $FILE_TYPE) {
-      $self->_process_pps_file_entry($child, $attachment);
+      $attachment->_process_pps_file_entry($child);
     } else {
       carp "Unknown entry type: $child->{Type}";
     }
