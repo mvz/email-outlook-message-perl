@@ -1,6 +1,7 @@
 package Email::Outlook::Message::Base;
 use strict;
 use warnings;
+use Encode;
 use OLE::Storage_Lite;
 
 my $DIR_TYPE = 1;
@@ -12,6 +13,87 @@ my $KNOWN_ENCODINGS = {
   '001F' => 'Unicode',
   '001E' => 'Ascii?',
   '0102' => 'Binary',
+};
+
+#
+# Descriptions partially based on mapitags.h
+#
+my $skipproperties = {
+  # Envelope properties
+  '000B' => "Conversation key?",
+  '001A' => "Type of message",
+  '003B' => "Sender address variant",
+  '003D' => "Contains 'Re: '",
+  '003F' => "'recieved by' id",
+  '0040' => "'recieved by' name",
+  # TODO: These two fields are part of the Sender field.
+  '0041' => "Sender variant address id",
+  '0042' => "Sender variant name",
+  '0043' => "'recieved representing' id",
+  '0044' => "'recieved representing' name",
+  '0046' => "Read receipt address id",
+  '0051' => "'recieved by' search key",
+  '0052' => "'recieved representing' search key",
+  '0053' => "Read receipt search key",
+  # TODO: These two fields are part of the Sender field.
+  '0064' => "Sender variant address type",
+  '0065' => "Sender variant address",
+  '0070' => "Conversation topic",
+  '0071' => "Conversation index",
+  '0075' => "'recieved by' address type",
+  '0076' => "'recieved by' email address",
+  '0077' => "'recieved representing' address type",
+  '0078' => "'recieved representing' email address",
+  '007F' => "something like a message id",
+  # Recipient properties
+  '0C19' => "Reply address variant",
+  '0C1D' => "Reply address variant",
+  '0C1E' => "Reply address type",
+  # Non-transmittable properties
+  '0E02' => "?Should BCC be displayed",
+  '0E0A' => "sent mail id",
+  '0E1D' => "Subject w/o Re",
+  '0E27' => "64 bytes: Unknown",
+  '0FF6' => "Index",
+  '0FF9' => "Index",
+  '0FFF' => "Address variant",
+  # Content properties
+  '1008' => "Summary or something",
+  '1009' => "RTF Compressed",
+  # --
+  '1046' => "From address variant",
+  # 'Common property'
+  '3001' => "Display name",
+  '3002' => "Address Type",
+  '300B' => "'Search key'",
+  # Message store info
+  '3414' => "Message Store Provider",
+  # Attachment properties
+  '3702' => "Attachment encoding",
+  '3703' => "Attachment extension",
+  '3709' => "WMF with attachment rendering info", # Maybe an icon or something?
+  '370A' => "Tag identifying application that supplied the attachment",
+  '3713' => "Icon URL?",
+  # 'Mail user'
+  '3A20' => "Address variant",
+  # 3900 -- 39FF: 'Address book'
+  '39FF' => "7 bit display name",
+  # 'Display table properties'
+  '3FF8' => "Routing data?",
+  '3FF9' => "Routing data?",
+  '3FFA' => "Routing data?",
+  '3FFB' => "Routing data?",
+  # 'Transport-defined envelope property'
+  '4029' => "Sender variant address type",
+  '402A' => "Sender variant address",
+  '402B' => "Sender variant name",
+  '5FF6' => "Recipient name",
+  '5FF7' => "Recipient address variant",
+  # 'Provider-defined internal non-transmittable property'
+  '6740' => "Unknown, binary data",
+  # User defined id's
+  '8000' => "Content Class",
+  '8002' => "Unknown, binary data",
 };
 
 
@@ -113,11 +195,61 @@ sub _process_pps_file_entry {
   return;
 }
 
+sub _check_pps_file_entries {
+  my ($self, $target, $map) = @_;
+
+  foreach my $property ($target->mapi_property_names) {
+    my ($encoding, $data) = @{$target->get_mapi_property($property)};
+    if (my $arr = $map->{$property}) {
+      if ($arr->[1]) {
+	if ($encoding eq $ENCODING_UNICODE) {
+	  $data = decode("UTF-16LE", $data);
+	}
+	$data =~ s/\000$//sg;
+	$data =~ s/\r\n/\n/sg;
+      }
+      $target->{$arr->[0]} = $data;
+    } else {
+      $self->_warn_about_skipped_property($property, $data);
+    }
+  }
+}
+
+sub _warn_about_skipped_property {
+  my ($self, $property, $data) = @_;
+
+  if ($skipproperties->{$property}) {
+    $self->{VERBOSE}
+      and warn "Skipping property $property ($skipproperties->{$property})\n";
+  } elsif (not $self->_is_transmittable_property($property)) {
+    $self->{VERBOSE}
+      and warn "Skipping property $property (non-transmittable property)\n";
+  } elsif ($property =~ /^80/) {
+    $self->{VERBOSE}
+      and warn "Skipping property $property (user-defined property)\n";
+  } elsif ($data eq "") {
+    $self->{VERBOSE}
+      and warn "Unknown property $property (no data)\n";
+  } else {
+    warn "Unknown property $property\n";
+  }
+  return;
+}
+
 package Email::Outlook::Message::AddressInfo;
 use strict;
 use warnings;
 use Carp;
 use base 'Email::Outlook::Message::Base';
+
+my $MAP_ADDRESSITEM_FILE = {
+  '3001' => ["NAME",            1], # Real name
+  '3002' => ["TYPE",            1], # Address type
+  '403D' => ["TYPE2",            1], # Address type TODO: Not used
+  '3003' => ["ADDRESS",         1], # Address
+  '403E' => ["ADDRESS2",         1], # Address TODO: Not used
+  '39FE' => ["SMTPADDRESS",     1], # SMTP Address variant
+};
 
 sub _process_pps {
   my ($self, $pps) = @_;
@@ -130,6 +262,7 @@ sub _process_pps {
       carp "Unknown entry type: $child->{Type}";
     }
   }
+  $self->_check_pps_file_entries($self, $MAP_ADDRESSITEM_FILE);
   return;
 }
 
@@ -241,92 +374,11 @@ use Email::Simple;
 use Email::MIME::Creator;
 use Email::MIME::ContentType;
 use POSIX;
-use Encode;
 use Carp;
 use base 'Email::Outlook::Message::Base';
 
 use vars qw($VERSION);
 $VERSION = "0.904";
-#
-# Descriptions partially based on mapitags.h
-#
-my $skipproperties = {
-  # Envelope properties
-  '000B' => "Conversation key?",
-  '001A' => "Type of message",
-  '003B' => "Sender address variant",
-  '003D' => "Contains 'Re: '",
-  '003F' => "'recieved by' id",
-  '0040' => "'recieved by' name",
-  # TODO: These two fields are part of the Sender field.
-  '0041' => "Sender variant address id",
-  '0042' => "Sender variant name",
-  '0043' => "'recieved representing' id",
-  '0044' => "'recieved representing' name",
-  '0046' => "Read receipt address id",
-  '0051' => "'recieved by' search key",
-  '0052' => "'recieved representing' search key",
-  '0053' => "Read receipt search key",
-  # TODO: These two fields are part of the Sender field.
-  '0064' => "Sender variant address type",
-  '0065' => "Sender variant address",
-  '0070' => "Conversation topic",
-  '0071' => "Conversation index",
-  '0075' => "'recieved by' address type",
-  '0076' => "'recieved by' email address",
-  '0077' => "'recieved representing' address type",
-  '0078' => "'recieved representing' email address",
-  '007F' => "something like a message id",
-  # Recipient properties
-  '0C19' => "Reply address variant",
-  '0C1D' => "Reply address variant",
-  '0C1E' => "Reply address type",
-  # Non-transmittable properties
-  '0E02' => "?Should BCC be displayed",
-  '0E0A' => "sent mail id",
-  '0E1D' => "Subject w/o Re",
-  '0E27' => "64 bytes: Unknown",
-  '0FF6' => "Index",
-  '0FF9' => "Index",
-  '0FFF' => "Address variant",
-  # Content properties
-  '1008' => "Summary or something",
-  '1009' => "RTF Compressed",
-  # --
-  '1046' => "From address variant",
-  # 'Common property'
-  '3001' => "Display name",
-  '3002' => "Address Type",
-  '300B' => "'Search key'",
-  # Message store info
-  '3414' => "Message Store Provider",
-  # Attachment properties
-  '3702' => "Attachment encoding",
-  '3703' => "Attachment extension",
-  '3709' => "WMF with attachment rendering info", # Maybe an icon or something?
-  '370A' => "Tag identifying application that supplied the attachment",
-  '3713' => "Icon URL?",
-  # 'Mail user'
-  '3A20' => "Address variant",
-  # 3900 -- 39FF: 'Address book'
-  '39FF' => "7 bit display name",
-  # 'Display table properties'
-  '3FF8' => "Routing data?",
-  '3FF9' => "Routing data?",
-  '3FFA' => "Routing data?",
-  '3FFB' => "Routing data?",
-  # 'Transport-defined envelope property'
-  '4029' => "Sender variant address type",
-  '402A' => "Sender variant address",
-  '402B' => "Sender variant name",
-  '5FF6' => "Recipient name",
-  '5FF7' => "Recipient address variant",
-  # 'Provider-defined internal non-transmittable property'
-  '6740' => "Unknown, binary data",
-  # User defined id's
-  '8000' => "Content Class",
-  '8002' => "Unknown, binary data",
-};
 
 my $skipheaders = {
   map { uc($_) => 1 }
@@ -361,15 +413,6 @@ my $MAP_SUBITEM_FILE = {
   '0E03' => ["CC",              1], # Cc: Names
   '1035' => ["MESSAGEID",       1], # Message-Id
   '1042' => ["INREPLYTO",       1], # In reply to Message-Id
-};
-
-my $MAP_ADDRESSITEM_FILE = {
-  '3001' => ["NAME",            1], # Real name
-  '3002' => ["TYPE",            1], # Address type
-  '403D' => ["TYPE2",            1], # Address type TODO: Not used
-  '3003' => ["ADDRESS",         1], # Address
-  '403E' => ["ADDRESS2",         1], # Address TODO: Not used
-  '39FE' => ["SMTPADDRESS",     1], # SMTP Address variant
 };
 
 #
@@ -530,7 +573,6 @@ sub _process_address {
 
   my $addr_info = new Email::Outlook::Message::AddressInfo($pps);
 
-  $self->_check_pps_file_entries($addr_info, $MAP_ADDRESSITEM_FILE);
   push @{$self->{ADDRESSES}}, $addr_info;
   return;
 }
@@ -547,47 +589,6 @@ sub _process_attachment {
     $attachment->{ENCODING} = '8bit';
   }
   push @{$self->{ATTACHMENTS}}, $attachment;
-  return;
-}
-
-sub _check_pps_file_entries {
-  my ($self, $target, $map) = @_;
-
-  foreach my $property ($target->mapi_property_names) {
-    my ($encoding, $data) = @{$target->get_mapi_property($property)};
-    if (my $arr = $map->{$property}) {
-      if ($arr->[1]) {
-	if ($encoding eq $ENCODING_UNICODE) {
-	  $data = decode("UTF-16LE", $data);
-	}
-	$data =~ s/\000$//sg;
-	$data =~ s/\r\n/\n/sg;
-      }
-      $target->{$arr->[0]} = $data;
-    } else {
-      $self->_warn_about_skipped_property($property, $data);
-    }
-  }
-}
-
-sub _warn_about_skipped_property {
-  my ($self, $property, $data) = @_;
-
-  if ($skipproperties->{$property}) {
-    $self->{VERBOSE}
-      and warn "Skipping property $property ($skipproperties->{$property})\n";
-  } elsif (not $self->_is_transmittable_property($property)) {
-    $self->{VERBOSE}
-      and warn "Skipping property $property (non-transmittable property)\n";
-  } elsif ($property =~ /^80/) {
-    $self->{VERBOSE}
-      and warn "Skipping property $property (user-defined property)\n";
-  } elsif ($data eq "") {
-    $self->{VERBOSE}
-      and warn "Unknown property $property (no data)\n";
-  } else {
-    warn "Unknown property $property\n";
-  }
   return;
 }
 
