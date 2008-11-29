@@ -1,3 +1,7 @@
+0.905	2008-11-29
+
+  - Handle unicode data
+
 0.904	2008-02-28
 
   - Remove spurious loading of Email::Abstract

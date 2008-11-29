@@ -42,7 +42,7 @@ Matijs van Zuijlen, C<matijs@matijs.net>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2002, 2004, 2006, 2007 by Matijs van Zuijlen
+Copyright 2002, 2004, 2006--2008 by Matijs van Zuijlen
 
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
@@ -62,7 +62,7 @@ my $DIR_TYPE = 1;
 my $FILE_TYPE = 2;
 
 use vars qw($VERSION);
-$VERSION = "0.904";
+$VERSION = "0.905";
 #
 # Descriptions partially based on mapitags.h
 #
