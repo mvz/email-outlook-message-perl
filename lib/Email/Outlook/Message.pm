@@ -1,7 +1,28 @@
 package Email::Outlook::Message::Base;
+use strict;
+use warnings;
+use OLE::Storage_Lite;
+
+my $DIR_TYPE = 1;
+my $FILE_TYPE = 2;
+
+my $ENCODING_UNICODE = '001F';
+my $KNOWN_ENCODINGS = {
+  '000D' => 'Directory',
+  '001F' => 'Unicode',
+  '001E' => 'Ascii?',
+  '0102' => 'Binary',
+};
+
+
 sub new {
-  my $class = shift;
-  return bless {_pps_file_entries => {}}, $class;
+  my ($class, $pps) = @_;
+  my $self = bless {
+    _pps_file_entries => {},
+    _pps => $pps
+  }, $class;
+  $self->_process_pps($pps);
+  return $self;
 }
 
 sub mapi_property_names {
@@ -20,11 +41,104 @@ sub set_mapi_property {
   return;
 }
 
+sub _process_pps {
+  return;
+}
+
+sub _get_pps_name {
+  my ($self, $pps) = @_;
+  my $name = OLE::Storage_Lite::Ucs2Asc($pps->{Name});
+  $name =~ s/\W/ /g;
+  return $name;
+}
+
+sub _parse_item_name {
+  my ($self, $name) = @_;
+
+  if ($name =~ /^__substg1 0_(....)(....)$/) {
+    my ($property, $encoding) = ($1, $2);
+    if ($encoding eq $ENCODING_UNICODE and not ($self->{HAS_UNICODE})) {
+      $self->{HAS_UNICODE} = 1;
+    } elsif (not $KNOWN_ENCODINGS->{$encoding}) {
+      warn "Unknown encoding $encoding. Results may be strange or wrong.\n";
+    }
+    return ($property, $encoding);
+  } else {
+    return (undef, undef);
+  }
+}
+
+sub _warn_about_unknown_directory {
+  my ($self, $pps) = @_;
+
+  my $name = $self->_get_pps_name($pps);
+  if ($name eq '__nameid_version1 0') {
+    $self->{VERBOSE}
+      and warn "Skipping DIR entry $name (Introductory stuff)\n";
+  } else {
+    warn "Unknown DIR entry $name\n";
+  }
+  return;
+}
+
+sub _warn_about_unknown_file {
+  my ($self, $pps) = @_;
+
+  my $name = $self->_get_pps_name($pps);
+
+  if ($name eq '__properties_version1 0'
+      or $name eq 'Olk10SideProps_0001') {
+    $self->{VERBOSE}
+      and warn "Skipping FILE entry $name (Properties)\n";
+  } else {
+    warn "Unknown FILE entry $name\n";
+  }
+  return;
+}
+
+#
+# Generic processor for a file entry: Inserts the entry's data into the
+# hash $target, using the $map to find the proper key.
+#
+sub _process_pps_file_entry {
+  my ($self, $pps, $target) = @_;
+
+  my $name = $self->_get_pps_name($pps);
+  my ($property, $encoding) = $self->_parse_item_name($name);
+
+  if (defined $property) {
+    $target->set_mapi_property($property, [$encoding, $pps->{Data}]);
+  } else {
+    $self->_warn_about_unknown_file($pps);
+  }
+  return;
+}
+
 package Email::Outlook::Message::AddressInfo;
-use base Email::Outlook::Message::Base;
+use strict;
+use warnings;
+use Carp;
+use base 'Email::Outlook::Message::Base';
+
+sub _process_pps {
+  my ($self, $pps) = @_;
+  foreach my $child (@{$pps->{Child}}) {
+    if ($child->{Type} == $DIR_TYPE) {
+      $self->_warn_about_unknown_directory($child); # DIR Entries: There should be none.
+    } elsif ($child->{Type} == $FILE_TYPE) {
+      $self->_process_pps_file_entry($child, $self);
+    } else {
+      carp "Unknown entry type: $child->{Type}";
+    }
+  }
+  return;
+}
 
 package Email::Outlook::Message::Attachment;
-use base Email::Outlook::Message::Base;
+use strict;
+use warnings;
+use base 'Email::Outlook::Message::Base';
+
 sub new {
   my $class = shift;
   my $self = $class->SUPER::new;
@@ -90,14 +204,10 @@ use warnings;
 use Email::Simple;
 use Email::MIME::Creator;
 use Email::MIME::ContentType;
-use OLE::Storage_Lite;
 use POSIX;
 use Encode;
 use Carp;
 use base 'Email::Outlook::Message::Base';
-
-my $DIR_TYPE = 1;
-my $FILE_TYPE = 2;
 
 use vars qw($VERSION);
 $VERSION = "0.904";
@@ -191,14 +301,6 @@ my $skipheaders = {
   "X-Msgconvert",
   "X-MS-Tnef-Correlator",
   "X-MS-Has-Attach"
-};
-
-my $ENCODING_UNICODE = '001F';
-my $KNOWN_ENCODINGS = {
-  '000D' => 'Directory',
-  '001F' => 'Unicode',
-  '001E' => 'Ascii?',
-  '0102' => 'Binary',
 };
 
 my $MAP_ATTACHMENT_FILE = {
@@ -390,17 +492,8 @@ sub _process_subdirectory {
 sub _process_address {
   my ($self, $pps) = @_;
 
-  my $addr_info = new Email::Outlook::Message::AddressInfo;
+  my $addr_info = new Email::Outlook::Message::AddressInfo($pps);
 
-  foreach my $child (@{$pps->{Child}}) {
-    if ($child->{Type} == $DIR_TYPE) {
-      $self->_warn_about_unknown_directory($child); # DIR Entries: There should be none.
-    } elsif ($child->{Type} == $FILE_TYPE) {
-      $self->_process_pps_file_entry($child, $addr_info);
-    } else {
-      carp "Unknown entry type: $child->{Type}";
-    }
-  }
   $self->_check_pps_file_entries($addr_info, $MAP_ADDRESSITEM_FILE);
   push @{$self->{ADDRESSES}}, $addr_info;
   return;
@@ -452,24 +545,6 @@ sub _process_attachment_subdirectory {
   return;
 }
 
-#
-# Generic processor for a file entry: Inserts the entry's data into the
-# hash $target, using the $map to find the proper key.
-#
-sub _process_pps_file_entry {
-  my ($self, $pps, $target) = @_;
-
-  my $name = $self->_get_pps_name($pps);
-  my ($property, $encoding) = $self->_parse_item_name($name);
-
-  if (defined $property) {
-    $target->set_mapi_property($property, [$encoding, $pps->{Data}]);
-  } else {
-    $self->_warn_about_unknown_file($pps);
-  }
-  return;
-}
-
 sub _check_pps_file_entries {
   my ($self, $target, $map) = @_;
 
@@ -488,34 +563,6 @@ sub _check_pps_file_entries {
       $self->_warn_about_skipped_property($property, $data);
     }
   }
-}
-
-sub _warn_about_unknown_directory {
-  my ($self, $pps) = @_;
-
-  my $name = $self->_get_pps_name($pps);
-  if ($name eq '__nameid_version1 0') {
-    $self->{VERBOSE}
-      and warn "Skipping DIR entry $name (Introductory stuff)\n";
-  } else {
-    warn "Unknown DIR entry $name\n";
-  }
-  return;
-}
-
-sub _warn_about_unknown_file {
-  my ($self, $pps) = @_;
-
-  my $name = $self->_get_pps_name($pps);
-
-  if ($name eq '__properties_version1 0'
-      or $name eq 'Olk10SideProps_0001') {
-    $self->{VERBOSE}
-      and warn "Skipping FILE entry $name (Properties)\n";
-  } else {
-    warn "Unknown FILE entry $name\n";
-  }
-  return;
 }
 
 sub _warn_about_skipped_property {
@@ -550,13 +597,6 @@ sub _is_transmittable_property {
   return 1 if $prop ge '6800' and $prop lt '7C00';
   return 1 if $prop ge '8000';
   return 0;
-}
-
-sub _get_pps_name {
-  my ($self, $pps) = @_;
-  my $name = OLE::Storage_Lite::Ucs2Asc($pps->{Name});
-  $name =~ s/\W/ /g;
-  return $name;
 }
 
 #
@@ -599,22 +639,6 @@ sub _submission_id_date {
   my $year = $1;
   $year += 100 if $year < 20;
   return $self->_format_date([$6,$5,$4,$3,$2-1,$year]);
-}
-
-sub _parse_item_name {
-  my ($self, $name) = @_;
-
-  if ($name =~ /^__substg1 0_(....)(....)$/) {
-    my ($property, $encoding) = ($1, $2);
-    if ($encoding eq $ENCODING_UNICODE and not ($self->{HAS_UNICODE})) {
-      $self->{HAS_UNICODE} = 1;
-    } elsif (not $KNOWN_ENCODINGS->{$encoding}) {
-      warn "Unknown encoding $encoding. Results may be strange or wrong.\n";
-    }
-    return ($property, $encoding);
-  } else {
-    return (undef, undef);
-  }
 }
 
 sub _SaveAttachment {
