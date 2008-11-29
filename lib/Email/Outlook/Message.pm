@@ -136,16 +136,53 @@ sub _process_pps {
 package Email::Outlook::Message::Attachment;
 use strict;
 use warnings;
+use Carp;
 use base 'Email::Outlook::Message::Base';
 
 sub new {
-  my $class = shift;
-  my $self = $class->SUPER::new;
+  my ($class, $pps) = @_;
+  my $self = $class->SUPER::new($pps);
   bless $self, $class;
-  $self->{MIMETYPE} = 'application/octet-stream';
-  $self->{ENCODING} = 'base64';
-  $self->{DISPOSITION} = 'attachment';
+  $self->{MIMETYPE} ||= 'application/octet-stream';
+  $self->{ENCODING} ||= 'base64';
+  $self->{DISPOSITION} ||= 'attachment';
   return $self;
+}
+
+sub _process_pps {
+  my ($self, $pps) = @_;
+  foreach my $child (@{$pps->{Child}}) {
+    if ($child->{Type} == $DIR_TYPE) {
+      $self->_process_attachment_subdirectory($child, $self);
+    } elsif ($child->{Type} == $FILE_TYPE) {
+      $self->_process_pps_file_entry($child);
+    } else {
+      carp "Unknown entry type: $child->{Type}";
+    }
+  }
+  return;
+}
+
+#
+# Process a subdirectory that is part of an attachment
+#
+sub _process_attachment_subdirectory {
+  my ($self, $pps, $att) = @_;
+  my $name = $self->_get_pps_name($pps);
+  my ($property, $encoding) = $self->_parse_item_name($name);
+
+  if ($property eq '3701') { # Nested msg file
+    my $msgp = Email::Outlook::Message->_empty_new();
+    $msgp->_set_verbosity($self->{VERBOSE});
+    $msgp->_process_root_dir($pps);
+
+    $att->{DATA} = $msgp->to_email_mime->as_string;
+    $att->{MIMETYPE} = 'message/rfc822';
+    $att->{ENCODING} = '8bit';
+  } else {
+    $self->_warn_about_unknown_directory($pps);
+  }
+  return;
 }
 
 package Email::Outlook::Message;
@@ -504,43 +541,12 @@ sub _process_address {
 sub _process_attachment {
   my ($self, $pps) = @_;
 
-  my $attachment = new Email::Outlook::Message::Attachment;
-  foreach my $child (@{$pps->{Child}}) {
-    if ($child->{Type} == $DIR_TYPE) {
-      $self->_process_attachment_subdirectory($child, $attachment);
-    } elsif ($child->{Type} == $FILE_TYPE) {
-      $attachment->_process_pps_file_entry($child);
-    } else {
-      carp "Unknown entry type: $child->{Type}";
-    }
-  }
+  my $attachment = new Email::Outlook::Message::Attachment($pps);
   $self->_check_pps_file_entries($attachment, $MAP_ATTACHMENT_FILE);
   if ($attachment->{MIMETYPE} eq 'multipart/signed') {
     $attachment->{ENCODING} = '8bit';
   }
   push @{$self->{ATTACHMENTS}}, $attachment;
-  return;
-}
-
-#
-# Process a subdirectory that is part of an attachment
-#
-sub _process_attachment_subdirectory {
-  my ($self, $pps, $att) = @_;
-  my $name = $self->_get_pps_name($pps);
-  my ($property, $encoding) = $self->_parse_item_name($name);
-
-  if ($property eq '3701') { # Nested msg file
-    my $msgp = ref($self)->_empty_new();
-    $msgp->_set_verbosity($self->{VERBOSE});
-    $msgp->_process_root_dir($pps);
-
-    $att->{DATA} = $msgp->to_email_mime->as_string;
-    $att->{MIMETYPE} = 'message/rfc822';
-    $att->{ENCODING} = '8bit';
-  } else {
-    $self->_warn_about_unknown_directory($pps);
-  }
   return;
 }
 
