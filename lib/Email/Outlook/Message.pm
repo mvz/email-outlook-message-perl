@@ -272,18 +272,20 @@ use warnings;
 use Carp;
 use base 'Email::Outlook::Message::Base';
 
-sub new {
-  my ($class, $pps) = @_;
-  my $self = $class->SUPER::new($pps);
-  bless $self, $class;
-  $self->{MIMETYPE} ||= 'application/octet-stream';
-  $self->{ENCODING} ||= 'base64';
-  $self->{DISPOSITION} ||= 'attachment';
-  return $self;
-}
+my $MAP_ATTACHMENT_FILE = {
+  '3701' => ["DATA",        0], # Data
+  '3704' => ["SHORTNAME",   1], # Short file name
+  '3707' => ["LONGNAME",    1], # Long file name
+  '370E' => ["MIMETYPE",    1], # mime type
+  '3712' => ["CONTENTID",   1], # content-id
+  '3716' => ["DISPOSITION", 1], # disposition
+};
 
 sub _process_pps {
   my ($self, $pps) = @_;
+  $self->{MIMETYPE} = 'application/octet-stream';
+  $self->{ENCODING} = 'base64';
+  $self->{DISPOSITION} = 'attachment';
   foreach my $child (@{$pps->{Child}}) {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_process_attachment_subdirectory($child, $self);
@@ -292,6 +294,10 @@ sub _process_pps {
     } else {
       carp "Unknown entry type: $child->{Type}";
     }
+  }
+  $self->_check_pps_file_entries($self, $MAP_ATTACHMENT_FILE);
+  if ($self->{MIMETYPE} eq 'multipart/signed') {
+    $self->{ENCODING} = '8bit';
   }
   return;
 }
@@ -389,15 +395,6 @@ my $skipheaders = {
   "X-Msgconvert",
   "X-MS-Tnef-Correlator",
   "X-MS-Has-Attach"
-};
-
-my $MAP_ATTACHMENT_FILE = {
-  '3701' => ["DATA",        0], # Data
-  '3704' => ["SHORTNAME",   1], # Short file name
-  '3707' => ["LONGNAME",    1], # Long file name
-  '370E' => ["MIMETYPE",    1], # mime type
-  '3712' => ["CONTENTID",   1], # content-id
-  '3716' => ["DISPOSITION", 1], # disposition
 };
 
 my $MAP_SUBITEM_FILE = {
@@ -584,10 +581,6 @@ sub _process_attachment {
   my ($self, $pps) = @_;
 
   my $attachment = new Email::Outlook::Message::Attachment($pps);
-  $self->_check_pps_file_entries($attachment, $MAP_ATTACHMENT_FILE);
-  if ($attachment->{MIMETYPE} eq 'multipart/signed') {
-    $attachment->{ENCODING} = '8bit';
-  }
   push @{$self->{ATTACHMENTS}}, $attachment;
   return;
 }
