@@ -547,6 +547,12 @@ sub _set_verbosity {
 sub _process_root_dir {
   my ($self, $pps) = @_;
 
+  $self->_process_pps($pps);
+  return;
+}
+
+sub _process_pps {
+  my ($self, $pps) = @_;
   foreach my $child (@{$pps->{Child}}) {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_process_subdirectory($child);
@@ -556,8 +562,12 @@ sub _process_root_dir {
       carp "Unknown entry type: $child->{Type}";
     }
   }
-  $self->_check_pps_file_entries($MAP_SUBITEM_FILE);
+  $self->_check_pps_file_entries($self->_property_map);
   return;
+}
+
+sub _property_map {
+  return $MAP_SUBITEM_FILE;
 }
 
 #
