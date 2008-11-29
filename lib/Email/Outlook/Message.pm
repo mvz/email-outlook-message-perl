@@ -245,9 +245,9 @@ use base 'Email::Outlook::Message::Base';
 my $MAP_ADDRESSITEM_FILE = {
   '3001' => ["NAME",            1], # Real name
   '3002' => ["TYPE",            1], # Address type
-  '403D' => ["TYPE2",            1], # Address type TODO: Not used
+  '403D' => ["TYPE2",           1], # Address type TODO: Not used
   '3003' => ["ADDRESS",         1], # Address
-  '403E' => ["ADDRESS2",         1], # Address TODO: Not used
+  '403E' => ["ADDRESS2",        1], # Address TODO: Not used
   '39FE' => ["SMTPADDRESS",     1], # SMTP Address variant
 };
 
@@ -255,15 +255,25 @@ sub _process_pps {
   my ($self, $pps) = @_;
   foreach my $child (@{$pps->{Child}}) {
     if ($child->{Type} == $DIR_TYPE) {
-      $self->_warn_about_unknown_directory($child); # DIR Entries: There should be none.
+      $self->_process_subdirectory($child);
     } elsif ($child->{Type} == $FILE_TYPE) {
       $self->_process_pps_file_entry($child);
     } else {
       carp "Unknown entry type: $child->{Type}";
     }
   }
-  $self->_check_pps_file_entries($MAP_ADDRESSITEM_FILE);
+  $self->_check_pps_file_entries($self->_property_map);
   return;
+}
+
+sub _property_map {
+  return $MAP_ADDRESSITEM_FILE;
+}
+
+# DIR Entries: There should be none.
+sub _process_subdirectory {
+  my ($self, $pps) = @_;
+  $self->_warn_about_unknown_directory($pps);
 }
 
 package Email::Outlook::Message::Attachment;
@@ -281,32 +291,40 @@ my $MAP_ATTACHMENT_FILE = {
   '3716' => ["DISPOSITION", 1], # disposition
 };
 
+sub new {
+  my ($class, $pps) = @_;
+  my $self = $class->SUPER::new($pps);
+  bless $self, $class;
+  $self->{MIMETYPE} ||= 'application/octet-stream';
+  $self->{ENCODING} ||= 'base64';
+  $self->{DISPOSITION} ||= 'attachment';
+  if ($self->{MIMETYPE} eq 'multipart/signed') {
+    $self->{ENCODING} = '8bit';
+  }
+  return $self;
+}
+
 sub _process_pps {
   my ($self, $pps) = @_;
-  $self->{MIMETYPE} = 'application/octet-stream';
-  $self->{ENCODING} = 'base64';
-  $self->{DISPOSITION} = 'attachment';
   foreach my $child (@{$pps->{Child}}) {
     if ($child->{Type} == $DIR_TYPE) {
-      $self->_process_attachment_subdirectory($child, $self);
+      $self->_process_subdirectory($child);
     } elsif ($child->{Type} == $FILE_TYPE) {
       $self->_process_pps_file_entry($child);
     } else {
       carp "Unknown entry type: $child->{Type}";
     }
   }
-  $self->_check_pps_file_entries($MAP_ATTACHMENT_FILE);
-  if ($self->{MIMETYPE} eq 'multipart/signed') {
-    $self->{ENCODING} = '8bit';
-  }
+  $self->_check_pps_file_entries($self->_property_map);
   return;
 }
 
-#
-# Process a subdirectory that is part of an attachment
-#
-sub _process_attachment_subdirectory {
-  my ($self, $pps, $att) = @_;
+sub _property_map {
+  return $MAP_ATTACHMENT_FILE;
+}
+
+sub _process_subdirectory {
+  my ($self, $pps) = @_;
   my $name = $self->_get_pps_name($pps);
   my ($property, $encoding) = $self->_parse_item_name($name);
 
@@ -315,9 +333,9 @@ sub _process_attachment_subdirectory {
     $msgp->_set_verbosity($self->{VERBOSE});
     $msgp->_process_root_dir($pps);
 
-    $att->{DATA} = $msgp->to_email_mime->as_string;
-    $att->{MIMETYPE} = 'message/rfc822';
-    $att->{ENCODING} = '8bit';
+    $self->{DATA} = $msgp->to_email_mime->as_string;
+    $self->{MIMETYPE} = 'message/rfc822';
+    $self->{ENCODING} = '8bit';
   } else {
     $self->_warn_about_unknown_directory($pps);
   }
