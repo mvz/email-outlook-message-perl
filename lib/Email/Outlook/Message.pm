@@ -4,17 +4,17 @@ sub new {
   return bless {_pps_file_entries => {}}, $class;
 }
 
-sub property_names {
+sub mapi_property_names {
   my $self = shift;
   return keys %{$self->{_pps_file_entries}};
 }
 
-sub get_property {
+sub get_mapi_property {
   my ($self, $name) = @_;
   return $self->{_pps_file_entries}->{$name};
 }
 
-sub _set_property {
+sub set_mapi_property {
   my ($self, $name, $data) = @_;
   $self->{_pps_file_entries}->{$name} = $data;
   return;
@@ -463,7 +463,7 @@ sub _process_pps_file_entry {
   my ($property, $encoding) = $self->_parse_item_name($name);
 
   if (defined $property) {
-    $target->_set_property($property, [$encoding, $pps->{Data}]);
+    $target->set_mapi_property($property, [$encoding, $pps->{Data}]);
   } else {
     $self->_warn_about_unknown_file($pps);
   }
@@ -473,14 +473,13 @@ sub _process_pps_file_entry {
 sub _check_pps_file_entries {
   my ($self, $target, $map) = @_;
 
-  foreach my $property ($target->property_names) {
-    my ($encoding, $data) = @{$target->get_property($property)};
+  foreach my $property ($target->mapi_property_names) {
+    my ($encoding, $data) = @{$target->get_mapi_property($property)};
     if (my $arr = $map->{$property}) {
-      # FIXME: This probably messes up unicode processing.
       if ($arr->[1]) {
-      if ($encoding eq $ENCODING_UNICODE) {
-	$data = decode("UTF-16LE", $data);
-      }
+	if ($encoding eq $ENCODING_UNICODE) {
+	  $data = decode("UTF-16LE", $data);
+	}
 	$data =~ s/\000$//sg;
 	$data =~ s/\r\n/\n/sg;
       }
