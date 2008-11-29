@@ -2,6 +2,7 @@ package Email::Outlook::Message::Base;
 use strict;
 use warnings;
 use Encode;
+use Carp;
 use OLE::Storage_Lite;
 
 my $DIR_TYPE = 1;
@@ -124,6 +125,17 @@ sub set_mapi_property {
 }
 
 sub _process_pps {
+  my ($self, $pps) = @_;
+  foreach my $child (@{$pps->{Child}}) {
+    if ($child->{Type} == $DIR_TYPE) {
+      $self->_process_subdirectory($child);
+    } elsif ($child->{Type} == $FILE_TYPE) {
+      $self->_process_pps_file_entry($child);
+    } else {
+      carp "Unknown entry type: $child->{Type}";
+    }
+  }
+  $self->_check_pps_file_entries($self->_property_map);
   return;
 }
 
@@ -251,21 +263,6 @@ my $MAP_ADDRESSITEM_FILE = {
   '39FE' => ["SMTPADDRESS",     1], # SMTP Address variant
 };
 
-sub _process_pps {
-  my ($self, $pps) = @_;
-  foreach my $child (@{$pps->{Child}}) {
-    if ($child->{Type} == $DIR_TYPE) {
-      $self->_process_subdirectory($child);
-    } elsif ($child->{Type} == $FILE_TYPE) {
-      $self->_process_pps_file_entry($child);
-    } else {
-      carp "Unknown entry type: $child->{Type}";
-    }
-  }
-  $self->_check_pps_file_entries($self->_property_map);
-  return;
-}
-
 sub _property_map {
   return $MAP_ADDRESSITEM_FILE;
 }
@@ -304,21 +301,6 @@ sub new {
   return $self;
 }
 
-sub _process_pps {
-  my ($self, $pps) = @_;
-  foreach my $child (@{$pps->{Child}}) {
-    if ($child->{Type} == $DIR_TYPE) {
-      $self->_process_subdirectory($child);
-    } elsif ($child->{Type} == $FILE_TYPE) {
-      $self->_process_pps_file_entry($child);
-    } else {
-      carp "Unknown entry type: $child->{Type}";
-    }
-  }
-  $self->_check_pps_file_entries($self->_property_map);
-  return;
-}
-
 sub _property_map {
   return $MAP_ATTACHMENT_FILE;
 }
@@ -331,7 +313,7 @@ sub _process_subdirectory {
   if ($property eq '3701') { # Nested msg file
     my $msgp = Email::Outlook::Message->_empty_new();
     $msgp->_set_verbosity($self->{VERBOSE});
-    $msgp->_process_root_dir($pps);
+    $msgp->_process_pps($pps);
 
     $self->{DATA} = $msgp->to_email_mime->as_string;
     $self->{MIMETYPE} = 'message/rfc822';
@@ -446,7 +428,7 @@ sub new {
   $pps or croak "Parsing $file as OLE file failed";
   $self->_set_verbosity($verbose);
   # TODO: Use separate object as parser?
-  $self->_process_root_dir($pps);
+  $self->_process_pps($pps);
 
   return $self;
 }
@@ -538,33 +520,6 @@ sub _set_verbosity {
 #     Items with properties of the attachment (including its data)
 #     Dir that is itself a .msg file (if the attachment is an email).
 #
-
-#
-# _process_root_dir: Check Root Entry, parse sub-entries.
-# The OLE file consists of a single entry called Root Entry, which has
-# several children. These children are parsed in the sub SubItem.
-# 
-sub _process_root_dir {
-  my ($self, $pps) = @_;
-
-  $self->_process_pps($pps);
-  return;
-}
-
-sub _process_pps {
-  my ($self, $pps) = @_;
-  foreach my $child (@{$pps->{Child}}) {
-    if ($child->{Type} == $DIR_TYPE) {
-      $self->_process_subdirectory($child);
-    } elsif ($child->{Type} == $FILE_TYPE) {
-      $self->_process_pps_file_entry($child);
-    } else {
-      carp "Unknown entry type: $child->{Type}";
-    }
-  }
-  $self->_check_pps_file_entries($self->_property_map);
-  return;
-}
 
 sub _property_map {
   return $MAP_SUBITEM_FILE;
