@@ -196,10 +196,10 @@ sub _process_pps_file_entry {
 }
 
 sub _check_pps_file_entries {
-  my ($self, $target, $map) = @_;
+  my ($self, $map) = @_;
 
-  foreach my $property ($target->mapi_property_names) {
-    my ($encoding, $data) = @{$target->get_mapi_property($property)};
+  foreach my $property ($self->mapi_property_names) {
+    my ($encoding, $data) = @{$self->get_mapi_property($property)};
     if (my $arr = $map->{$property}) {
       if ($arr->[1]) {
 	if ($encoding eq $ENCODING_UNICODE) {
@@ -208,7 +208,7 @@ sub _check_pps_file_entries {
 	$data =~ s/\000$//sg;
 	$data =~ s/\r\n/\n/sg;
       }
-      $target->{$arr->[0]} = $data;
+      $self->{$arr->[0]} = $data;
     } else {
       $self->_warn_about_skipped_property($property, $data);
     }
@@ -262,7 +262,7 @@ sub _process_pps {
       carp "Unknown entry type: $child->{Type}";
     }
   }
-  $self->_check_pps_file_entries($self, $MAP_ADDRESSITEM_FILE);
+  $self->_check_pps_file_entries($MAP_ADDRESSITEM_FILE);
   return;
 }
 
@@ -295,7 +295,7 @@ sub _process_pps {
       carp "Unknown entry type: $child->{Type}";
     }
   }
-  $self->_check_pps_file_entries($self, $MAP_ATTACHMENT_FILE);
+  $self->_check_pps_file_entries($MAP_ATTACHMENT_FILE);
   if ($self->{MIMETYPE} eq 'multipart/signed') {
     $self->{ENCODING} = '8bit';
   }
@@ -538,7 +538,7 @@ sub _process_root_dir {
       carp "Unknown entry type: $child->{Type}";
     }
   }
-  $self->_check_pps_file_entries($self, $MAP_SUBITEM_FILE);
+  $self->_check_pps_file_entries($MAP_SUBITEM_FILE);
   return;
 }
 
