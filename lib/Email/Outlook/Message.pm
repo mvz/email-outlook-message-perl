@@ -277,6 +277,7 @@ package Email::Outlook::Message::Attachment;
 use strict;
 use warnings;
 use Carp;
+use Email::MIME::ContentType;
 use base 'Email::Outlook::Message::Base';
 
 my $MAP_ATTACHMENT_FILE = {
@@ -299,6 +300,24 @@ sub new {
     $self->{ENCODING} = '8bit';
   }
   return $self;
+}
+
+sub to_email_mime {
+  my $self = shift;
+
+  my $mt = parse_content_type($self->{MIMETYPE});
+  my $m = Email::MIME->create(
+    attributes => {
+      content_type => "$mt->{discrete}/$mt->{composite}",
+      %{$mt->{attributes}},
+      encoding => $self->{ENCODING},
+      filename => ($self->{LONGNAME} ? $self->{LONGNAME} : $self->{SHORTNAME}),
+      name => ($self->{LONGNAME} ? $self->{LONGNAME} : $self->{SHORTNAME}),
+      disposition => $self->{DISPOSITION},
+    },
+    header => [ 'Content-ID' => $self->{CONTENTID} ],
+    body => $self->{DATA});
+  return $m
 }
 
 sub _property_map {
@@ -378,7 +397,6 @@ use strict;
 use warnings;
 use Email::Simple;
 use Email::MIME::Creator;
-use Email::MIME::ContentType;
 use POSIX;
 use Carp;
 use base 'Email::Outlook::Message::Base';
@@ -626,18 +644,7 @@ sub _submission_id_date {
 sub _SaveAttachment {
   my ($self, $mime, $att) = @_;
 
-  my $mt = parse_content_type($att->{MIMETYPE});
-  my $m = Email::MIME->create(
-    attributes => {
-      content_type => "$mt->{discrete}/$mt->{composite}",
-      %{$mt->{attributes}},
-      encoding => $att->{ENCODING},
-      filename => ($att->{LONGNAME} ? $att->{LONGNAME} : $att->{SHORTNAME}),
-      name => ($att->{LONGNAME} ? $att->{LONGNAME} : $att->{SHORTNAME}),
-      disposition => $att->{DISPOSITION},
-    },
-    header => [ 'Content-ID' => $att->{CONTENTID} ],
-    body => $att->{DATA});
+  my $m = $att->to_email_mime;
   $self->_clean_part_header($m);
   $mime->parts_add([$m]);
   return;
