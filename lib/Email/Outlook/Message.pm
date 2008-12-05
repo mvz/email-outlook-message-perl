@@ -675,29 +675,41 @@ sub _Address {
 }
 
 # Find SMTP addresses for the given list of names
-sub _ExpandAddressList {
+sub _expand_address_list {
   my ($self, $names) = @_;
 
   my $addresspool = $self->{ADDRESSES};
   my @namelist = split /; */, $names;
   my @result;
   name: foreach my $name (@namelist) {
-    foreach my $address (@$addresspool) {
-      if ($name eq $address->{NAME}) {
-	my $addresstext = $address->{NAME} . " <";
-	if (defined ($address->{SMTPADDRESS})) {
-	  $addresstext .= $address->{SMTPADDRESS};
-	} elsif ($address->{TYPE} eq "SMTP") {
-	  $addresstext .= $address->{ADDRESS};
-	}
-	$addresstext .= ">";
-	push @result, $addresstext;
-	next name;
-      }
+    my $addresstext = $self->_find_name_in_addresspool($name);
+    if ($addresstext) {
+      push @result, $addresstext;
+    } else {
+      push @result, $name;
     }
-    push @result, $name;
   }
   return join ", ", @result;
+}
+
+sub _find_name_in_addresspool {
+  my ($self, $name) = @_;
+
+  my $addresspool = $self->{ADDRESSES};
+
+  foreach my $address (@$addresspool) {
+    if ($name eq $address->{NAME}) {
+      my $addresstext = $address->{NAME} . " <";
+      if (defined ($address->{SMTPADDRESS})) {
+	$addresstext .= $address->{SMTPADDRESS};
+      } elsif ($address->{TYPE} eq "SMTP") {
+	$addresstext .= $address->{ADDRESS};
+      }
+      $addresstext .= ">";
+      return $addresstext;
+    }
+  }
+  return undef;
 }
 
 # TODO: Don't really want to need this!
@@ -758,8 +770,8 @@ sub _SetHeaderFields {
   $self->_AddHeaderField($mime, 'Subject', $self->{SUBJECT});
   $self->_AddHeaderField($mime, 'From', $self->_Address("FROM"));
   #$self->_AddHeaderField($mime, 'Reply-To', $self->_Address("REPLYTO"));
-  $self->_AddHeaderField($mime, 'To', $self->_ExpandAddressList($self->{TO}));
-  $self->_AddHeaderField($mime, 'Cc', $self->_ExpandAddressList($self->{CC}));
+  $self->_AddHeaderField($mime, 'To', $self->_expand_address_list($self->{TO}));
+  $self->_AddHeaderField($mime, 'Cc', $self->_expand_address_list($self->{CC}));
   $self->_AddHeaderField($mime, 'Message-Id', $self->{MESSAGEID});
   $self->_AddHeaderField($mime, 'In-Reply-To', $self->{INREPLYTO});
 
