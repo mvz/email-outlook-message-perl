@@ -114,14 +114,44 @@ sub mapi_property_names {
 }
 
 sub get_mapi_property {
-  my ($self, $name) = @_;
-  return $self->{_pps_file_entries}->{$name};
+  my ($self, $code) = @_;
+  return $self->{_pps_file_entries}->{$code};
 }
 
 sub set_mapi_property {
-  my ($self, $name, $data) = @_;
-  $self->{_pps_file_entries}->{$name} = $data;
+  my ($self, $code, $data) = @_;
+  $self->{_pps_file_entries}->{$code} = $data;
   return;
+}
+
+sub property {
+  my ($self, $name) = @_;
+  my $map = $self->_property_map;
+  # TODO: Prepare reverse map instead of doing dumb lookup.
+  foreach my $code (keys %$map) {
+    my $arr = $map->{$code};
+    next unless $arr->[0] eq $name;
+    my $prop = $self->get_mapi_property($code);
+    if ($prop) {
+      my ($encoding, $data) = @{$prop};
+      return $self->_decode_mapi_property($arr->[1], $encoding, $data);
+    } else {
+      return undef;
+    }
+  }
+  return undef;
+}
+
+sub _decode_mapi_property {
+  my ($self, $decode, $encoding, $data) = @_;
+  if ($decode) {
+    if ($encoding eq $ENCODING_UNICODE) {
+      $data = decode("UTF-16LE", $data);
+    }
+    $data =~ s/\000$//sg;
+    $data =~ s/\r\n/\n/sg;
+  }
+  return $data;
 }
 
 sub _process_pps {
@@ -213,14 +243,8 @@ sub _check_pps_file_entries {
   foreach my $property ($self->mapi_property_names) {
     my ($encoding, $data) = @{$self->get_mapi_property($property)};
     if (my $arr = $map->{$property}) {
-      if ($arr->[1]) {
-	if ($encoding eq $ENCODING_UNICODE) {
-	  $data = decode("UTF-16LE", $data);
-	}
-	$data =~ s/\000$//sg;
-	$data =~ s/\r\n/\n/sg;
-      }
-      $self->{$arr->[0]} = $data;
+      $self->{$arr->[0]} = $self->_decode_mapi_property($arr->[1],
+	$encoding, $data);
     } else {
       $self->_warn_about_skipped_property($property, $data);
     }
@@ -271,6 +295,23 @@ sub _property_map {
 sub _process_subdirectory {
   my ($self, $pps) = @_;
   $self->_warn_about_unknown_directory($pps);
+}
+
+sub name { return $_[0]->property('NAME') }
+sub address_type { return $_[0]->property('TYPE') }
+sub address { return $_[0]->property('ADDRESS') }
+sub smtp_address { return $_[0]->property('SMTPADDRESS') }
+
+sub display_address {
+  my $self = shift;
+  my $addresstext = $self->name . " <";
+  if (defined ($self->smtp_address)) {
+    $addresstext .= $self->smtp_address;
+  } elsif ($self->address_type eq "SMTP") {
+    $addresstext .= $self->address;
+  }
+  $addresstext .= ">";
+  return $addresstext;
 }
 
 package Email::Outlook::Message::Attachment;
@@ -678,7 +719,6 @@ sub _Address {
 sub _expand_address_list {
   my ($self, $names) = @_;
 
-  my $addresspool = $self->{ADDRESSES};
   my @namelist = split /; */, $names;
   my @result;
   name: foreach my $name (@namelist) {
@@ -698,15 +738,8 @@ sub _find_name_in_addresspool {
   my $addresspool = $self->{ADDRESSES};
 
   foreach my $address (@$addresspool) {
-    if ($name eq $address->{NAME}) {
-      my $addresstext = $address->{NAME} . " <";
-      if (defined ($address->{SMTPADDRESS})) {
-	$addresstext .= $address->{SMTPADDRESS};
-      } elsif ($address->{TYPE} eq "SMTP") {
-	$addresstext .= $address->{ADDRESS};
-      }
-      $addresstext .= ">";
-      return $addresstext;
+    if ($name eq $address->name) {
+      return $address->display_address;
     }
   }
   return undef;
