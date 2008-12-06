@@ -156,6 +156,10 @@ my $skipheaders = {
 };
 
 my $ENCODING_UNICODE = '001F';
+my $ENCODING_ASCII = '001E';
+my $ENCODING_BINARY = '0102';
+my $ENCODING_DIRECORY = '000D';
+
 my $KNOWN_ENCODINGS = {
   '000D' => 'Directory',
   '001F' => 'Unicode',
@@ -174,9 +178,9 @@ my $MAP_ATTACHMENT_FILE = {
 
 my $MAP_SUBITEM_FILE = {
   '1000' => ["BODY_PLAIN",      1], # Body
-  '1013' => ["BODY_HTML",       1], # HTML Version of body
+  '1013' => ["BODY_HTML",       0], # HTML Version of body
   '0037' => ["SUBJECT",         1], # Subject
-  '0047' => ["SUBMISSION_ID",   1], # Seems to contain the date
+  '0047' => ["SUBMISSION_ID",   0], # Seems to contain the date
   '007D' => ["HEAD",            1], # Full headers
   '0C1A' => ["FROM",            1], # From: Name
   '0C1E' => ["FROM_ADDR_TYPE",  1], # From: Address type
@@ -431,7 +435,10 @@ sub _process_pps_file_entry {
 
   if (defined $property and my $arr = $map->{$property}) {
     my $data = $pps->{Data};
-    if ($arr->[1]) {
+    if ($encoding eq $ENCODING_DIRECORY) {
+      die "Unexpected directory encoding for property $name";
+    }
+    if ($encoding ne $ENCODING_BINARY) {
       if ($encoding eq $ENCODING_UNICODE) {
 	$data = decode("UTF-16LE", $data);
       }
@@ -667,13 +674,17 @@ sub _create_mime_plain_body {
 
 sub _create_mime_html_body {
   my $self = shift;
+  my $body = $self->{BODY_HTML};
+  # FIXME: This makes sure tests succeed for now, but is not really
+  # necessary for correct display in the mail reader.
+  $body =~ s/\r\n/\n/sg;
   return Email::MIME->create(
     attributes => {
       content_type => "text/html",
       disposition => "inline",
       encoding => "8bit",
     },
-    body => $self->{BODY_HTML}
+    body => $body
   );
 }
 # Copy original header data.
