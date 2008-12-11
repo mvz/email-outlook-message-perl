@@ -168,36 +168,36 @@ my $KNOWN_ENCODINGS = {
 };
 
 my $MAP_ATTACHMENT_FILE = {
-  '3701' => ["DATA",        0], # Data
-  '3704' => ["SHORTNAME",   1], # Short file name
-  '3707' => ["LONGNAME",    1], # Long file name
-  '370E' => ["MIMETYPE",    1], # mime type
-  '3712' => ["CONTENTID",   1], # content-id
-  '3716' => ["DISPOSITION", 1], # disposition
+  '3701' => "DATA",        # Data
+  '3704' => "SHORTNAME",   # Short file name
+  '3707' => "LONGNAME",    # Long file name
+  '370E' => "MIMETYPE",    # mime type
+  '3712' => "CONTENTID",   # content-id
+  '3716' => "DISPOSITION", # disposition
 };
 
 my $MAP_SUBITEM_FILE = {
-  '1000' => ["BODY_PLAIN",      1], # Body
-  '1013' => ["BODY_HTML",       0], # HTML Version of body
-  '0037' => ["SUBJECT",         1], # Subject
-  '0047' => ["SUBMISSION_ID",   0], # Seems to contain the date
-  '007D' => ["HEAD",            1], # Full headers
-  '0C1A' => ["FROM",            1], # From: Name
-  '0C1E' => ["FROM_ADDR_TYPE",  1], # From: Address type
-  '0C1F' => ["FROM_ADDR",       1], # From: Address
-  '0E04' => ["TO",              1], # To: Names
-  '0E03' => ["CC",              1], # Cc: Names
-  '1035' => ["MESSAGEID",       1], # Message-Id
-  '1042' => ["INREPLYTO",       1], # In reply to Message-Id
+  '1000' => "BODY_PLAIN",      # Body
+  '1013' => "BODY_HTML",       # HTML Version of body
+  '0037' => "SUBJECT",         # Subject
+  '0047' => "SUBMISSION_ID",   # Seems to contain the date
+  '007D' => "HEAD",            # Full headers
+  '0C1A' => "FROM",            # From: Name
+  '0C1E' => "FROM_ADDR_TYPE",  # From: Address type
+  '0C1F' => "FROM_ADDR",       # From: Address
+  '0E04' => "TO",              # To: Names
+  '0E03' => "CC",              # Cc: Names
+  '1035' => "MESSAGEID",       # Message-Id
+  '1042' => "INREPLYTO",       # In reply to Message-Id
 };
 
 my $MAP_ADDRESSITEM_FILE = {
-  '3001' => ["NAME",            1], # Real name
-  '3002' => ["TYPE",            1], # Address type
-  '403D' => ["TYPE",            1], # Address type
-  '3003' => ["ADDRESS",         1], # Address
-  '403E' => ["ADDRESS",         1], # Address
-  '39FE' => ["SMTPADDRESS",     1], # SMTP Address variant
+  '3001' => "NAME",	    # Real name
+  '3002' => "TYPE",         # Address type
+  '403D' => "TYPE",         # Address type
+  '3003' => "ADDRESS",      # Address
+  '403E' => "ADDRESS",      # Address
+  '39FE' => "SMTPADDRESS",  # SMTP Address variant
 };
 
 #
@@ -433,7 +433,7 @@ sub _process_pps_file_entry {
   my $name = $self->_get_pps_name($pps);
   my ($property, $encoding) = $self->_parse_item_name($name);
 
-  if (defined $property and my $arr = $map->{$property}) {
+  if (defined $property and my $key = $map->{$property}) {
     my $data = $pps->{Data};
     if ($encoding eq $ENCODING_DIRECORY) {
       die "Unexpected directory encoding for property $name";
@@ -445,7 +445,7 @@ sub _process_pps_file_entry {
       $data =~ s/\000$//sg;
       $data =~ s/\r\n/\n/sg;
     }
-    $target->{$arr->[0]} = $data;
+    $target->{$key} = $data;
   } else {
     $self->_warn_about_unknown_file($pps);
   }
