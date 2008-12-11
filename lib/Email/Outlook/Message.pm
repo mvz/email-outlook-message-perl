@@ -457,6 +457,7 @@ sub _warn_about_unknown_directory {
 
   my $name = $self->_get_pps_name($pps);
   if ($name eq '__nameid_version1 0') {
+    # TODO: Use this data to access so-called named properties.
     $self->{VERBOSE}
       and warn "Skipping DIR entry $name (Introductory stuff)\n";
   } else {
