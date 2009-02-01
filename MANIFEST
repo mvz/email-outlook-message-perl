@@ -2,7 +2,9 @@ Build.PL
 Changes
 lib/Email/Outlook/Message.pm
 MANIFEST			This list of files
+META.yml
 README
+t/basics.t
 t/files/gpg_signed.msg
 t/files/plain_jpeg_attached.msg
 t/files/plain_uc_unsent.msg
@@ -13,4 +15,4 @@ t/plain_jpeg_attached.t
 t/plain_unsent.t
 t/pod_coverage.t
 TODO
-META.yml
+Makefile.PL

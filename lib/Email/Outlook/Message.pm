@@ -92,6 +92,7 @@ use Email::MIME::Creator;
 use Email::MIME::ContentType;
 use OLE::Storage_Lite;
 use POSIX;
+use Encode;
 use Carp;
 use base 'Email::Outlook::Message::Base';
 
@@ -99,7 +100,7 @@ my $DIR_TYPE = 1;
 my $FILE_TYPE = 2;
 
 use vars qw($VERSION);
-$VERSION = "0.903";
+$VERSION = "0.904";
 #
 # Descriptions partially based on mapitags.h
 #
@@ -246,7 +247,7 @@ sub new {
 
   my $msg = OLE::Storage_Lite->new($file);
   my $pps = $msg->getPpsTree(1);
-  $pps or croak "Parsing $file as OLE file failed.";
+  $pps or croak "Parsing $file as OLE file failed";
   $self->_set_verbosity($verbose);
   # TODO: Use separate object as parser?
   $self->_process_root_dir($pps);
@@ -477,6 +478,9 @@ sub _check_pps_file_entries {
     if (my $arr = $map->{$property}) {
       # FIXME: This probably messes up unicode processing.
       if ($arr->[1]) {
+      if ($encoding eq $ENCODING_UNICODE) {
+	$data = decode("UTF-16LE", $data);
+      }
 	$data =~ s/\000$//sg;
 	$data =~ s/\r\n/\n/sg;
       }
@@ -577,7 +581,8 @@ sub _extract_ole_date {
 sub _format_date {
   my ($self, $datearr) = @_;
   my $day = qw(Sun Mon Tue Wed Thu Fri Sat)[strftime("%w", @$datearr)];
-  return strftime("$day, %d %h %Y %H:%M:%S +0000", @$datearr);
+  my $month = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)[strftime("%m", @$datearr) - 1];
+  return strftime("$day, %d $month %Y %H:%M:%S +0000", @$datearr);
 }
 
 # If we didn't get the date from the original header data, we may be able
@@ -603,8 +608,6 @@ sub _parse_item_name {
   if ($name =~ /^__substg1 0_(....)(....)$/) {
     my ($property, $encoding) = ($1, $2);
     if ($encoding eq $ENCODING_UNICODE and not ($self->{HAS_UNICODE})) {
-      warn "This msg file contains Unicode fields."
-	. " This is currently unsupported.\n";
       $self->{HAS_UNICODE} = 1;
     } elsif (not $KNOWN_ENCODINGS->{$encoding}) {
       warn "Unknown encoding $encoding. Results may be strange or wrong.\n";
