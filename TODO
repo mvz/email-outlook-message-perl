@@ -1,0 +1,14 @@
+TODO (Functional)
+- Move packages out of main program into Vetsin::
+- Solve bug report concerning word file.
+- Process applefiles (using Mac::AppleSingleDouble??)
+- Do s/t useful with UTF-16 encoded text.
+
+- Allow more than one file to be specified on the command line
+- Allow an output file to be specified on the command line
+- (Ongoing...) Make use of more of the items, if possible.
+
+TODO (Technical)
+- Use some constants for property codes
+- Refactor some of the if constructs?
+

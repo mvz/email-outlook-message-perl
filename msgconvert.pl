@@ -16,16 +16,6 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
 # Public License for more details.
 #
-# TODO (Functional)
-# - Allow more than one file to be specified on the command line
-# - Allow an output file to be specified on the command line
-# - (Ongoing...) Make use of more of the items, if possible.
-# - Handle applefiles
-#
-# TODO (Technical)
-# - Use some constants for property codes
-# - Refactor some of the if constructs?
-#
 # CHANGES:
 # 20020715  Recognize new items 'Cc', mime type of attachment, long
 #	    filename of attachment, and full headers. Attachments turn out
@@ -309,8 +299,8 @@ sub print {
 }
 
 sub set_verbosity {
-  my $self = shift;
-  my $verbosity = shift or die "Internal error: no verbosity level";
+  my ($self, $verbosity) = @_;
+  defined $verbosity or die "Internal error: no verbosity level";
   $self->{VERBOSE} = $verbosity;
 }
 
@@ -328,8 +318,7 @@ sub set_verbosity {
 # several children. These children are parsed in the sub SubItem.
 # 
 sub _RootDir {
-  my $self = shift;
-  my $PPS = shift;
+  my ($self, $PPS) = @_;
 
   foreach my $child (@{$PPS->{Child}}) {
     $self->_SubItem($child);
@@ -337,10 +326,8 @@ sub _RootDir {
 }
 
 sub _SubItem {
-  my $self = shift;
-  my $PPS = shift;
+  my ($self, $PPS) = @_;
   
-  # DIR Entries:
   if ($PPS->{Type} == DIR_TYPE) {
     $self->_SubItemDir($PPS);
   } elsif ($PPS->{Type} == FILE_TYPE) {
@@ -377,8 +364,7 @@ sub _SubItemFile {
 }
 
 sub _AddressDir {
-  my $self = shift;
-  my $PPS = shift;
+  my ($self, $PPS) = @_;
 
   my $address = {
     NAME	=> undef,
@@ -392,9 +378,7 @@ sub _AddressDir {
 }
 
 sub _AddressItem {
-  my $self = shift;
-  my $PPS = shift;
-  my $addr_info = shift;
+  my ($self, $PPS, $addr_info) = @_;
 
   my $name = $self->_GetName($PPS);
 
@@ -433,8 +417,7 @@ sub _AddressItem {
 }
 
 sub _AttachmentDir {
-  my $self = shift;
-  my $PPS = shift;
+  my ($self, $PPS) = @_;
 
   my $attachment = {
     SHORTNAME	=> undef,
@@ -451,9 +434,7 @@ sub _AttachmentDir {
 }
 
 sub _AttachmentItem {
-  my $self = shift;
-  my $PPS = shift;
-  my $att_info = shift;
+  my ($self, $PPS, $att_info) = @_;
 
   my $name = $self->_GetName($PPS);
 
@@ -493,8 +474,8 @@ sub _MapProperty {
 }
 
 sub _UnknownDir {
-  my $self = shift;
-  my $name = shift;
+  my ($self, $name) = @_;
+
   if ($name eq '__nameid_version1 0') {
     $self->{VERBOSE}
       and warn "Skipping DIR entry $name (Introductory stuff)\n";
@@ -504,8 +485,7 @@ sub _UnknownDir {
 }
 
 sub _UnknownFile {
-  my $self = shift;
-  my $name = shift;
+  my ($self, $name) = @_;
 
   if ($name eq '__properties_version1 0') {
     $self->{VERBOSE}
@@ -537,22 +517,18 @@ sub _UnknownFile {
 #
 
 sub _GetName {
-  my $self = shift;
-  my $PPS = shift;
-
+  my ($self, $PPS) = @_;
   return $self->_NormalizeWhiteSpace(OLE::Storage_Lite::Ucs2Asc($PPS->{Name}));
 }
 
 sub _NormalizeWhiteSpace {
-  my $self = shift;
-  my $name = shift;
+  my ($self, $name) = @_;
   $name =~ s/\W/ /g;
   return $name;
 }
 
 sub _GetOLEDate {
-  my $self = shift;
-  my $PPS = shift;
+  my ($self, $PPS) = @_;
   unless (defined ($self->{OLEDATE})) {
     # Make Date
     my $datearr;
@@ -563,8 +539,7 @@ sub _GetOLEDate {
 }
 
 sub _FormatDate {
-  my $self = shift;
-  my $datearr = shift;
+  my ($self, $datearr) = @_;
 
   # TODO: This is a little convoluted. Directly using strftime didn't seem
   # to work.
@@ -580,21 +555,17 @@ sub _FormatDate {
 # the format YYMMDDHHMMSS.
 sub _SubmissionIdDate {
   my $self = shift;
-  my $submission_id = $self->{SUBMISSION_ID};
 
-  defined $submission_id or return undef;
-
+  my $submission_id = $self->{SUBMISSION_ID} or return undef;
   $submission_id =~ m/l=.*-(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)Z-.*/
     or return undef;
-
   my $year = $1;
   $year += 100 if $year < 20;
   return $self->_FormatDate([$6,$5,$4,$3,$2-1,$year]);
 }
 
 sub _ParseItemName {
-  my $self = shift;
-  my $name = shift;
+  my ($self, $name) = @_;
 
   if ($name =~ /^__substg1 0_(....)(....)$/) {
     my ($property, $encoding) = ($1, $2);
@@ -612,9 +583,7 @@ sub _ParseItemName {
 }
 
 sub _SaveAttachment {
-  my $self = shift;
-  my $mime = shift;
-  my $att = shift;
+  my ($self, $mime, $att) = @_;
 
   my $ent = $mime->attach(
     Type => $att->{MIMETYPE},
@@ -634,10 +603,7 @@ sub _SaveAttachment {
 }
 
 sub _SetAddressPart {
-  my $self = shift;
-  my $adrname = shift;
-  my $partname = shift;
-  my $data = shift;
+  my ($self, $adrname, $partname, $data) = @_;
 
   my $address = $self->{ADDRESSES}->{$adrname};
   $data =~ s/\000//g;
@@ -658,10 +624,7 @@ sub _SetAddressPart {
 
 # Set header fields
 sub _AddHeaderField {
-  my $self = shift;
-  my $mime = shift;
-  my $fieldname = shift;
-  my $value = shift;
+  my ($self, $mime, $fieldname, $value) = @_;
 
   my $oldvalue = $mime->head->get($fieldname);
   return if $oldvalue;
@@ -669,8 +632,7 @@ sub _AddHeaderField {
 }
 
 sub _Address {
-  my $self = shift;
-  my $tag = shift;
+  my ($self, $tag) = @_;
   my $name = $self->{$tag} || "";
   my $address = $self->{$tag . "_ADDR"} || "";
   return "$name <$address>";
@@ -678,8 +640,7 @@ sub _Address {
 
 # Find SMTP addresses for the given list of names
 sub _ExpandAddressList {
-  my $self = shift;
-  my $names = shift;
+  my ($self, $names) = @_;
 
   my $addresspool = $self->{ADDRESSES};
   my @namelist = split /; */, $names;
@@ -704,8 +665,7 @@ sub _ExpandAddressList {
 }
 
 sub _ParseHead {
-  my $self = shift;
-  my $data = shift;
+  my ($self, $date) = @_;
   defined $data or return undef;
   # Parse full header date if we got that.
   my $parser = new MIME::Parser();

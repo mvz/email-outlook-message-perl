@@ -1,5 +1,5 @@
 *.msg
 mbox
-testfiles
 .*.swp
 mapitags.h
+problemfiles
