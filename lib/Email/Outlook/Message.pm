@@ -9,6 +9,10 @@ my $DIR_TYPE = 1;
 my $FILE_TYPE = 2;
 
 my $ENCODING_UNICODE = '001F';
+my $ENCODING_ASCII = '001E';
+my $ENCODING_BINARY = '0102';
+my $ENCODING_DIRECORY = '000D';
+
 my $KNOWN_ENCODINGS = {
   '000D' => 'Directory',
   '001F' => 'Unicode',
@@ -97,7 +101,6 @@ my $skipproperties = {
   '8002' => "Unknown, binary data",
 };
 
-
 sub new {
   my ($class, $pps) = @_;
   my $self = bless {
@@ -129,12 +132,12 @@ sub property {
   my $map = $self->_property_map;
   # TODO: Prepare reverse map instead of doing dumb lookup.
   foreach my $code (keys %$map) {
-    my $arr = $map->{$code};
-    next unless $arr->[0] eq $name;
+    my $key = $map->{$code};
+    next unless $key eq $name;
     my $prop = $self->get_mapi_property($code);
     if ($prop) {
       my ($encoding, $data) = @{$prop};
-      return $self->_decode_mapi_property($arr->[1], $encoding, $data);
+      return $self->_decode_mapi_property($encoding, $data);
     } else {
       return undef;
     }
@@ -143,8 +146,11 @@ sub property {
 }
 
 sub _decode_mapi_property {
-  my ($self, $decode, $encoding, $data) = @_;
-  if ($decode) {
+  my ($self, $encoding, $data) = @_;
+  if ($encoding eq $ENCODING_DIRECORY) {
+    die "Unexpected directory encoding";
+  }
+  if ($encoding ne $ENCODING_BINARY) {
     if ($encoding eq $ENCODING_UNICODE) {
       $data = decode("UTF-16LE", $data);
     }
@@ -197,6 +203,7 @@ sub _warn_about_unknown_directory {
 
   my $name = $self->_get_pps_name($pps);
   if ($name eq '__nameid_version1 0') {
+    # TODO: Use this data to access so-called named properties.
     $self->{VERBOSE}
       and warn "Skipping DIR entry $name (Introductory stuff)\n";
   } else {
@@ -242,9 +249,8 @@ sub _check_pps_file_entries {
 
   foreach my $property ($self->mapi_property_names) {
     my ($encoding, $data) = @{$self->get_mapi_property($property)};
-    if (my $arr = $map->{$property}) {
-      $self->{$arr->[0]} = $self->_decode_mapi_property($arr->[1],
-	$encoding, $data);
+    if (my $key = $map->{$property}) {
+      $self->{$key} = $self->_decode_mapi_property($encoding, $data);
     } else {
       $self->_warn_about_skipped_property($property, $data);
     }
@@ -279,12 +285,12 @@ use Carp;
 use base 'Email::Outlook::Message::Base';
 
 my $MAP_ADDRESSITEM_FILE = {
-  '3001' => ["NAME",            1], # Real name
-  '3002' => ["TYPE",            1], # Address type
-  '403D' => ["TYPE2",           1], # Address type TODO: Not used
-  '3003' => ["ADDRESS",         1], # Address
-  '403E' => ["ADDRESS2",        1], # Address TODO: Not used
-  '39FE' => ["SMTPADDRESS",     1], # SMTP Address variant
+  '3001' => "NAME",          # Real name
+  '3002' => "TYPE",          # Address type
+  '403D' => "TYPE2",         # Address type TODO: Not used
+  '3003' => "ADDRESS",       # Address
+  '403E' => "ADDRESS2",      # Address TODO: Not used
+  '39FE' => "SMTPADDRESS",   # SMTP Address variant
 };
 
 sub _property_map {
@@ -322,12 +328,12 @@ use Email::MIME::ContentType;
 use base 'Email::Outlook::Message::Base';
 
 my $MAP_ATTACHMENT_FILE = {
-  '3701' => ["DATA",        0], # Data
-  '3704' => ["SHORTNAME",   1], # Short file name
-  '3707' => ["LONGNAME",    1], # Long file name
-  '370E' => ["MIMETYPE",    1], # mime type
-  '3712' => ["CONTENTID",   1], # content-id
-  '3716' => ["DISPOSITION", 1], # disposition
+  '3701' => "DATA",        # Data
+  '3704' => "SHORTNAME",   # Short file name
+  '3707' => "LONGNAME",    # Long file name
+  '370E' => "MIMETYPE",    # mime type
+  '3712' => "CONTENTID",   # content-id
+  '3716' => "DISPOSITION", # disposition
 };
 
 sub new {
@@ -428,7 +434,7 @@ Matijs van Zuijlen, C<matijs@matijs.net>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2002, 2004, 2006, 2007 by Matijs van Zuijlen
+Copyright 2002, 2004, 2006--2008 by Matijs van Zuijlen
 
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
@@ -443,7 +449,7 @@ use Carp;
 use base 'Email::Outlook::Message::Base';
 
 use vars qw($VERSION);
-$VERSION = "0.904";
+$VERSION = "0.905";
 
 my $skipheaders = {
   map { uc($_) => 1 }
@@ -457,18 +463,18 @@ my $skipheaders = {
 };
 
 my $MAP_SUBITEM_FILE = {
-  '1000' => ["BODY_PLAIN",      1], # Body
-  '1013' => ["BODY_HTML",       1], # HTML Version of body
-  '0037' => ["SUBJECT",         1], # Subject
-  '0047' => ["SUBMISSION_ID",   1], # Seems to contain the date
-  '007D' => ["HEAD",            1], # Full headers
-  '0C1A' => ["FROM",            1], # From: Name
-  '0C1E' => ["FROM_ADDR_TYPE",  1], # From: Address type
-  '0C1F' => ["FROM_ADDR",       1], # From: Address
-  '0E04' => ["TO",              1], # To: Names
-  '0E03' => ["CC",              1], # Cc: Names
-  '1035' => ["MESSAGEID",       1], # Message-Id
-  '1042' => ["INREPLYTO",       1], # In reply to Message-Id
+  '1000' => "BODY_PLAIN",      # Body
+  '1013' => "BODY_HTML",       # HTML Version of body
+  '0037' => "SUBJECT",         # Subject
+  '0047' => "SUBMISSION_ID",   # Seems to contain the date
+  '007D' => "HEAD",            # Full headers
+  '0C1A' => "FROM",            # From: Name
+  '0C1E' => "FROM_ADDR_TYPE",  # From: Address type
+  '0C1F' => "FROM_ADDR",       # From: Address
+  '0E04' => "TO",              # To: Names
+  '0E03' => "CC",              # Cc: Names
+  '1035' => "MESSAGEID",       # Message-Id
+  '1042' => "INREPLYTO",       # In reply to Message-Id
 };
 
 #
@@ -770,13 +776,17 @@ sub _create_mime_plain_body {
 
 sub _create_mime_html_body {
   my $self = shift;
+  my $body = $self->{BODY_HTML};
+  # FIXME: This makes sure tests succeed for now, but is not really
+  # necessary for correct display in the mail reader.
+  $body =~ s/\r\n/\n/sg;
   return Email::MIME->create(
     attributes => {
       content_type => "text/html",
       disposition => "inline",
       encoding => "8bit",
     },
-    body => $self->{BODY_HTML}
+    body => $body
   );
 }
 # Copy original header data.

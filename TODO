@@ -2,7 +2,6 @@ TODO
 - Process compressed RTF bodies
 - Process applefiles (using Mac::AppleSingleDouble?)
 - Process gpg-signed mail properly.
-- Properly handle UTF16 text.
 - Create interface to internal properties.
 - Allow an output file to be specified on the command line
 - Make use of more of the items, if possible.
