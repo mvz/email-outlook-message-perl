@@ -236,10 +236,7 @@ sub to_email_mime {
   my $bodymime;
   my $mime;
 
-  unless ($self->{BODY_HTML} or $self->{BODY_PLAIN}) {
-    $self->{BODY_PLAIN} = "";
-  }
-  if ($self->{BODY_PLAIN}) {
+  if ($self->{BODY_PLAIN} or not $self->{BODY_HTML}) {
     $plain = $self->_create_mime_plain_body();
   }
   if ($self->{BODY_HTML}) {
@@ -627,6 +624,8 @@ sub _Address {
 # Find SMTP addresses for the given list of names
 sub _ExpandAddressList {
   my ($self, $names) = @_;
+
+  return "" unless defined $names;
 
   my $addresspool = $self->{ADDRESSES};
   my @namelist = split /; */, $names;

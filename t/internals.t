@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Email::Outlook::Message;
 #use MIME::Entity;
 use Email::MIME::Creator;
@@ -10,6 +10,7 @@ ok($p, 'Checking internal new');
 test_copy_header_data($p);
 test_is_transmittable_property($p);
 test_submission_id_date($p);
+test_to_email_mime($p);
 
 # DONE
 
@@ -61,5 +62,12 @@ sub test_submission_id_date {
   my $p = shift;
   $p->{SUBMISSION_ID} = "c=us;a=;p=Something;l=ABCDEFGH1-030728080154Z-268.";
   is($p->_submission_id_date, "Mon, 28 Jul 2003 08:01:54 +0000");
+}
+
+sub test_to_email_mime {
+  my $p = shift;
+  $p->{BODY_PLAIN} = undef;
+  $p->{BODY_HTML} = undef;
+  ok(defined $p->to_email_mime);
 }
 
