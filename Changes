@@ -1,3 +1,8 @@
+0.906	2009-03-14
+
+  - Make sure to_email_mime always returns a mime object, even if email has
+    no body.
+
 0.905	2008-11-29
 
   - Handle unicode data
