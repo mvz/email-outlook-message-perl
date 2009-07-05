@@ -158,7 +158,7 @@ my $skipheaders = {
 my $ENCODING_UNICODE = '001F';
 my $ENCODING_ASCII = '001E';
 my $ENCODING_BINARY = '0102';
-my $ENCODING_DIRECORY = '000D';
+my $ENCODING_DIRECTORY = '000D';
 
 my $KNOWN_ENCODINGS = {
   '000D' => 'Directory',
@@ -432,7 +432,7 @@ sub _process_pps_file_entry {
 
   if (defined $property and my $key = $map->{$property}) {
     my $data = $pps->{Data};
-    if ($encoding eq $ENCODING_DIRECORY) {
+    if ($encoding eq $ENCODING_DIRECTORY) {
       die "Unexpected directory encoding for property $name";
     }
     if ($encoding ne $ENCODING_BINARY) {
