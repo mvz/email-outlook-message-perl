@@ -1,7 +1,11 @@
+0.907	2009-07-06
+
+  - Handle nested OLE files that are not .MSG files
+
 0.906	2009-03-14
 
   - Make sure to_email_mime always returns a mime object, even if email has
-    no body.
+    no body
 
 0.905	2008-11-29
 
@@ -16,7 +20,7 @@
 
 0.903	2007-10-14
 
-  - Dates from OLE and submission_id are GMT, not local time.
+  - Dates from OLE and submission_id are GMT, not local time
 
 0.902	2007-10-10
 
