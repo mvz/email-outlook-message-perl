@@ -428,12 +428,19 @@ sub _process_attachment_subdirectory {
       $att->{MIMETYPE} = 'message/rfc822';
       $att->{ENCODING} = '8bit';
     } else {
+      foreach my $child (@{$pps->{Child}}) {
+	if ($child->{Type} == $FILE_TYPE) {
+	  foreach my $prop ("Time1st", "Time2nd") {
+	    $child->{$prop} = undef;
+	  }
+	}
+      }
       my $nPps = OLE::Storage_Lite::PPS::Root->new(
-	"Root Entry", $pps->{Time1st}, $pps->{Time2nd}, $pps->{Child});
+	$pps->{Time1st}, $pps->{Time2nd}, $pps->{Child});
       my $data;
       my $io = IO::String->new($data);
       binmode($io);
-      $nPps->save($io);
+      $nPps->save($io, 1);
       $att->{DATA} = $data;
       #      $att->{MIMETYPE} = 'message/rfc822';
       #	    $att->{ENCODING} = '8bit';
