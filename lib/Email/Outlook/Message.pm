@@ -201,6 +201,13 @@ my $MAP_ADDRESSITEM_FILE = {
   '39FE' => "SMTPADDRESS",  # SMTP Address variant
 };
 
+my $MAP_PROPSTREAM_TAG = {
+    0x3007 => 'DATE2ND',    # Outlook created??
+    0x0039 => 'DATE1ST',    # Outlook sent date
+ #  0x0E06 => 'DATE2ND',    # more dates, not needed here
+ #  0x3008 => 'DATE2ND',
+};
+
 #
 # Main body of module
 #
@@ -318,7 +325,7 @@ sub _process_root_dir {
     if ($child->{Type} == $DIR_TYPE) {
       $self->_process_subdirectory($child);
     } elsif ($child->{Type} == $FILE_TYPE) {
-      $self->_process_pps_file_entry($child, $self, $MAP_SUBITEM_FILE);
+      $self->_process_pps_file_entry($child, $self, $MAP_SUBITEM_FILE, $MAP_PROPSTREAM_TAG);
     } else {
       carp "Unknown entry type: $child->{Type}";
     }
@@ -451,13 +458,36 @@ sub _process_attachment_subdirectory {
   return;
 }
 
+sub _process_prop_stream {
+  my ($self, $target, $data, $map) = @_;
+  my ($n, $len) = (32, length $data) ;
+
+  while ($n + 16 <= $len) {
+    my @f = unpack "v4", substr $data, $n, 8;
+    my $t = $map->{$f [1]} ;
+    # $f[2]: bit 1 -- mandatory, bit 2 -- readable, bit 3 -- writable
+    next unless $t && ($f [2] & 2) && $f [3] == 0;
+
+    # At the moment, there are only date entries ...
+    my @a = OLE::Storage_Lite::OLEDate2Local substr $data, $n + 8, 8;
+
+    if ($t eq 'DATE1ST') {
+      unshift @{$target->{PROPDATE}}, $self->_format_date (\@a) ;
+    } else { # DATE2ND
+      push @{$target->{PROPDATE}}, $self->_format_date (\@a) ;
+    }
+  } continue {
+    $n += 16 ;
+  }
+}
+
 #
 # Generic processor for a file entry: Inserts the entry's data into the
 # hash $target, using the $map to find the proper key.
 # TODO: Mapping should probably be applied at a later time instead.
 #
 sub _process_pps_file_entry {
-  my ($self, $pps, $target, $map) = @_;
+  my ($self, $pps, $target, $map, $map2) = @_;
 
   my $name = $self->_get_pps_name($pps);
   my ($property, $encoding) = $self->_parse_item_name($name);
@@ -475,6 +505,9 @@ sub _process_pps_file_entry {
       $data =~ s/\r\n/\n/sg;
     }
     $target->{$key} = $data;
+  }
+  elsif ($name eq '__properties_version1 0' && $map2) {
+    $self->_process_prop_stream ($target, $pps->{Data}, $map2);
   } else {
     $self->_warn_about_unknown_file($pps);
   }
@@ -754,6 +787,9 @@ sub _SetHeaderFields {
 
   # Second preferred option: get it from the SUBMISSION_ID:
   $self->_AddHeaderField($mime, 'Date', $self->_submission_id_date());
+
+  # Most prefered option from the property list
+  $self->_AddHeaderField($mime, 'Date', $self->{PROPDATE}->[0]);
 
   # After this, we'll try getting the date from the original headers.
   return;
