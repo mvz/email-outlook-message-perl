@@ -560,8 +560,8 @@ sub _extract_ole_date {
     # Make Date
     my $datearr;
     $datearr = $pps->{Time2nd};
-    $datearr = $pps->{Time1st} unless($datearr && @$datearr [0]);
-    $self->{OLEDATE} = $self->_format_date($datearr) if $datearr && @$datearr [0];
+    $datearr = $pps->{Time1st} unless $datearr and @$datearr[0];
+    $self->{OLEDATE} = $self->_format_date($datearr) if $datearr and @$datearr[0];
   }
   return;
 }
