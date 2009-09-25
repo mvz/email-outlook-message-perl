@@ -464,17 +464,17 @@ sub _process_prop_stream {
 
   while ($n + 16 <= $len) {
     my @f = unpack "v4", substr $data, $n, 8;
-    my $t = $map->{$f [1]} ;
+    my $t = $map->{$f[1]} ;
     # $f[2]: bit 1 -- mandatory, bit 2 -- readable, bit 3 -- writable
-    next unless $t && ($f [2] & 2) && $f [3] == 0;
+    next unless $t and ($f[2] & 2) and $f[3] == 0;
 
     # At the moment, there are only date entries ...
     my @a = OLE::Storage_Lite::OLEDate2Local substr $data, $n + 8, 8;
 
     if ($t eq 'DATE1ST') {
-      unshift @{$target->{PROPDATE}}, $self->_format_date (\@a) ;
+      unshift @{$target->{PROPDATE}}, $self->_format_date(\@a) ;
     } else { # DATE2ND
-      push @{$target->{PROPDATE}}, $self->_format_date (\@a) ;
+      push @{$target->{PROPDATE}}, $self->_format_date(\@a) ;
     }
   } continue {
     $n += 16 ;
@@ -505,8 +505,7 @@ sub _process_pps_file_entry {
       $data =~ s/\r\n/\n/sg;
     }
     $target->{$key} = $data;
-  }
-  elsif ($name eq '__properties_version1 0' && $map2) {
+  } elsif ($name eq '__properties_version1 0' and $map2) {
     $self->_process_prop_stream ($target, $pps->{Data}, $map2);
   } else {
     $self->_warn_about_unknown_file($pps);
