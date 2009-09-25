@@ -109,7 +109,9 @@ my $skipproperties = {
   # Content properties
   '1008' => "Summary or something",
   '1009' => "RTF Compressed",
+  '10F3' => "Subject",
   # --
+  '1039' => "References, trouble ticket etc.",
   '1046' => "From address variant",
   # 'Common property'
   '3001' => "Display name",
@@ -124,6 +126,7 @@ my $skipproperties = {
   '370A' => "Tag identifying application that supplied the attachment",
   '3713' => "Icon URL?",
   # 'Mail user'
+  '3A00' => "aPage - internal?",
   '3A20' => "Address variant",
   # 3900 -- 39FF: 'Address book'
   '39FF' => "7 bit display name",
