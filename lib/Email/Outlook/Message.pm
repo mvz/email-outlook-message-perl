@@ -109,9 +109,8 @@ my $skipproperties = {
   # Content properties
   '1008' => "Summary or something",
   '1009' => "RTF Compressed",
-  '10F3' => "Subject",
+  '10F3' => "URL component name",
   # --
-  '1039' => "References, trouble ticket etc.",
   '1046' => "From address variant",
   # 'Common property'
   '3001' => "Display name",
@@ -126,8 +125,8 @@ my $skipproperties = {
   '370A' => "Tag identifying application that supplied the attachment",
   '3713' => "Icon URL?",
   # 'Mail user'
-  '3A00' => "aPage - internal?",
-  '3A20' => "Address variant",
+  '3A00' => "Recipient's account name",
+  '3A20' => "Recipient's display name",
   # 3900 -- 39FF: 'Address book'
   '39FF' => "7 bit display name",
   # 'Display table properties'
@@ -192,6 +191,7 @@ my $MAP_SUBITEM_FILE = {
   '0E04' => "TO",              # To: Names
   '0E03' => "CC",              # Cc: Names
   '1035' => "MESSAGEID",       # Message-Id
+  '1039' => "REFERENCES",      # References: Header
   '1042' => "INREPLYTO",       # In reply to Message-Id
 };
 
@@ -750,6 +750,7 @@ sub _SetHeaderFields {
   $self->_AddHeaderField($mime, 'Cc', $self->_ExpandAddressList($self->{CC}));
   $self->_AddHeaderField($mime, 'Message-Id', $self->{MESSAGEID});
   $self->_AddHeaderField($mime, 'In-Reply-To', $self->{INREPLYTO});
+  $self->_AddHeaderField($mime, 'References', $self->{REFERENCES});
 
   # Least preferred option to set the Date: header; this uses the date the
   # msg file was saved.
