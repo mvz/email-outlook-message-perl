@@ -63,7 +63,7 @@ my $DIR_TYPE = 1;
 my $FILE_TYPE = 2;
 
 use vars qw($VERSION);
-$VERSION = "0.907";
+$VERSION = "0.908";
 #
 # Descriptions partially based on mapitags.h
 #
