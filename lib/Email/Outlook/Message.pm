@@ -147,17 +147,6 @@ my $skipproperties = {
   '8002' => "Unknown, binary data",
 };
 
-my $skipheaders = {
-  map { uc($_) => 1 }
-  "MIME-Version",
-  "Content-Type",
-  "Content-Transfer-Encoding",
-  "X-Mailer",
-  "X-Msgconvert",
-  "X-MS-Tnef-Correlator",
-  "X-MS-Has-Attach"
-};
-
 my $ENCODING_UNICODE = '001F';
 my $ENCODING_ASCII = '001E';
 my $ENCODING_BINARY = '0102';
@@ -177,6 +166,17 @@ my $MAP_ATTACHMENT_FILE = {
   '370E' => "MIMETYPE",    # mime type
   '3712' => "CONTENTID",   # content-id
   '3716' => "DISPOSITION", # disposition
+};
+
+my $skipheaders = {
+  map { uc($_) => 1 }
+  "MIME-Version",
+  "Content-Type",
+  "Content-Transfer-Encoding",
+  "X-Mailer",
+  "X-Msgconvert",
+  "X-MS-Tnef-Correlator",
+  "X-MS-Has-Attach"
 };
 
 my $MAP_SUBITEM_FILE = {
@@ -689,7 +689,7 @@ sub _Address {
 }
 
 # Find SMTP addresses for the given list of names
-sub _ExpandAddressList {
+sub _expand_address_list {
   my ($self, $names) = @_;
 
   return "" unless defined $names;
@@ -778,8 +778,8 @@ sub _SetHeaderFields {
   $self->_AddHeaderField($mime, 'Subject', $self->{SUBJECT});
   $self->_AddHeaderField($mime, 'From', $self->_Address("FROM"));
   #$self->_AddHeaderField($mime, 'Reply-To', $self->_Address("REPLYTO"));
-  $self->_AddHeaderField($mime, 'To', $self->_ExpandAddressList($self->{TO}));
-  $self->_AddHeaderField($mime, 'Cc', $self->_ExpandAddressList($self->{CC}));
+  $self->_AddHeaderField($mime, 'To', $self->_expand_address_list($self->{TO}));
+  $self->_AddHeaderField($mime, 'Cc', $self->_expand_address_list($self->{CC}));
   $self->_AddHeaderField($mime, 'Message-Id', $self->{MESSAGEID});
   $self->_AddHeaderField($mime, 'In-Reply-To', $self->{INREPLYTO});
   $self->_AddHeaderField($mime, 'References', $self->{REFERENCES});
