@@ -254,6 +254,7 @@ sub to_email_mime {
 
   if ($self->{BODY_PLAIN}) { push(@parts, $self->_create_mime_plain_body()); }
   if ($self->{BODY_HTML}) { push(@parts, $self->_create_mime_html_body()); }
+  if ($self->{BODY_RTF}) { push(@parts, $self->_create_mime_rtf_body()); }
 
   if ((scalar @parts) > 1) {
     map { $self->_clean_part_header($_) } @parts;
@@ -756,6 +757,68 @@ sub _create_mime_html_body {
   );
 }
 
+# Implementation based on the information in
+# http://www.freeutils.net/source/jtnef/rtfcompressed.jsp,
+# and the implementation in tnef version 1.4.5.
+use constant MAGIC_COMPRESSED_RTF => 0x75465a4c;
+use constant MAGIC_UNCOMPRESSED_RTF => 0x414c454d;
+use constant BASE_BUFFER =>
+  "{\\rtf1\\ansi\\mac\\deff0\\deftab720{\\fonttbl;}{\\f0\\fnil \\froman "
+  . "\\fswiss \\fmodern \\fscript \\fdecor MS Sans SerifSymbolArial"
+  . "Times New RomanCourier{\\colortbl\\red0\\green0\\blue0\n\r\\par "
+  . "\\pard\\plain\\f0\\fs20\\b\\i\\u\\tab\\tx";
+
+
+sub _create_mime_rtf_body {
+  my $self = shift;
+  my $data = $self->{BODY_RTF};
+
+  my ($size, $rawsize, $magic, $crc) = unpack "V4", substr $data, 0, 16;
+
+  my $buffer;
+
+  if ($magic == MAGIC_COMPRESSED_RTF) {
+    my $input_length = length($data);
+    my $in = 16; 
+    $buffer = BASE_BUFFER;
+    my @flags;
+    while ($in < $input_length) {
+      if (@flags == 0) {
+	@flags = split "", unpack "b8", substr $data, $in++, 1;
+      }
+      my $flag = shift @flags;
+      if ($flag == "0") {
+	$buffer .= substr $data, $in++, 1;
+      } else {
+	my ($a, $b) = unpack "C2", substr $data, $in, 2;
+	my $offset = ($a << 4) | ($b >> 4);
+	my $length = ($b & 0xf) + 2;
+	my $buflen = length $buffer;
+	my $longoffset = $buflen - ($buflen % 4096) + $offset;
+	if ($longoffset > $buflen) { $longoffset -= 4096; }
+	# FIXME: What if $longoffset + $length > $buflen?
+	$buffer .= substr $buffer, $longoffset, $length;
+	$in += 2;
+      }
+    }
+    $buffer = substr $buffer, length BASE_BUFFER;
+  } elsif ($magic == MAGIC_UNCOMPRESSED_RTF) {
+    $buffer = substr $data, length BASE_BUFFER;
+  } else {
+    warn "Incorrect magic number in RTF body.\n";
+    # TODO: What to return?
+    return;
+  }
+  return Email::MIME->create(
+    attributes => {
+      content_type => "text/rtf",
+      charset => "ISO-8859-1",
+      disposition => "inline",
+      encoding => "8bit",
+    },
+    body => $buffer
+  );
+}
 # Copy original header data.
 # Note: This should contain the Date: header.
 sub _copy_header_data {
