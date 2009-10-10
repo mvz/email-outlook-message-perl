@@ -111,7 +111,6 @@ my $skipproperties = {
   '0FFF' => "Address variant",
   # Content properties
   '1008' => "Summary or something",
-  '1009' => "RTF Compressed",
   '10F3' => "URL component name",
   # --
   '1046' => "From address variant",
@@ -184,6 +183,7 @@ my $skipheaders = {
 
 my $MAP_SUBITEM_FILE = {
   '1000' => "BODY_PLAIN",      # Body
+  '1009' => "BODY_RTF",	       # Compressed-RTF version of body
   '1013' => "BODY_HTML",       # HTML Version of body
   '0037' => "SUBJECT",         # Subject
   '0047' => "SUBMISSION_ID",   # Seems to contain the date
@@ -250,27 +250,25 @@ sub to_email_mime {
   my $bodymime;
   my $mime;
 
-  if ($self->{BODY_PLAIN} or not $self->{BODY_HTML}) {
-    $plain = $self->_create_mime_plain_body();
-  }
-  if ($self->{BODY_HTML}) {
-    $html = $self->_create_mime_html_body();
-  }
+  my @parts;
 
-  if ($html and $plain) {
-    $self->_clean_part_header($plain);
-    $self->_clean_part_header($html);
+  if ($self->{BODY_PLAIN}) { push(@parts, $self->_create_mime_plain_body()); }
+  if ($self->{BODY_HTML}) { push(@parts, $self->_create_mime_html_body()); }
+
+  if ((scalar @parts) > 1) {
+    map { $self->_clean_part_header($_) } @parts;
+
     $bodymime = Email::MIME->create(
       attributes => {
 	content_type => "multipart/alternative",
 	encoding => "8bit",
       },
-      parts => [$plain, $html]
+      parts => \@parts
     );
-  } elsif ($html) {
-    $bodymime = $html;
+  } elsif ((@parts) == 1) {
+    $bodymime = $parts[0];
   } else {
-    $bodymime = $plain;
+    $bodymime = $self->_create_mime_plain_body();
   }
 
   if (@{$self->{ATTACHMENTS}}>0) {
@@ -757,6 +755,7 @@ sub _create_mime_html_body {
     body => $body
   );
 }
+
 # Copy original header data.
 # Note: This should contain the Date: header.
 sub _copy_header_data {
