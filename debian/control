@@ -1,0 +1,24 @@
+Source: libemail-outlook-message-perl
+Section: perl
+Priority: optional
+Build-Depends: debhelper (>= 7), perl (>= 5.10) | libmodule-build-perl
+Build-Depends-Indep: perl, libio-all-perl,
+  libemail-mime-modifier-perl (>= 1.442),
+  libemail-mime-contenttype-perl (>= 1.014),
+  libemail-mime-creator-perl (>= 1.454), libemail-simple-perl (>= 2.003),
+  libole-storage-lite-perl (>= 0.14)
+Maintainer: Matijs van Zuijlen <matijs@matijs.net>
+Standards-Version: 3.8.3
+Homepage: http://search.cpan.org/dist/Email-Outlook-Message/
+
+Package: libemail-outlook-message-perl
+Architecture: all
+Depends: ${perl:Depends}, ${misc:Depends}, libio-all-perl,
+  libemail-mime-modifier-perl (>= 1.442),
+  libemail-mime-contenttype-perl (>= 1.014),
+  libemail-mime-creator-perl (>= 1.454), libemail-simple-perl (>= 2.003),
+  libole-storage-lite-perl (>= 0.14)
+Description: Read Outlook .msg files
+ Parses .msg message files as produced by Microsoft Outlook.
+ .
+ This description was automagically extracted from the module by dh-make-perl.
