@@ -36,6 +36,9 @@ Not all data that's in the .msg file is converted. There simply are some
 parts whose meaning escapes me. Formatting of text messages will also be
 lost. GPG signed mail is not processed correctly.
 
+It would be nice if we could write .MSG files too, but that will require
+quite a big rewrite.
+
 =head1 AUTHOR
 
 Matijs van Zuijlen, C<matijs@matijs.net>
