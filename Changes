@@ -1,3 +1,7 @@
+0.909	2009-10-11
+
+  - Handle (compressed) RTF version of message body.
+
 0.908	2009-09-27
 
   Bugfix release:

@@ -23,14 +23,14 @@ DEPENDENCIES
 
 This module requires these other modules:
 
-Standard:
+Core:
 
   Carp
   POSIX
+  Encode
 
 Others:
 
-  Date::Format		    - 2.22 or later
   Email::MIME::ContentType  - 1.014 or later
   Email::MIME::Modifier	    - 1.442 or later
   Email::MIME::Creator	    - 1.454 or later
@@ -44,7 +44,7 @@ For testing:
 
 COPYRIGHT AND LICENCE
 
-  Copyright 2002, 2004, 2006, 2007 Matijs van Zuijlen.
+  Copyright 2002, 2004, 2006--2009 Matijs van Zuijlen.
 
   This program is free software; you can redistribute it and/or
   modify it under the same terms as Perl itself.

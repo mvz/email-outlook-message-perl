@@ -32,9 +32,13 @@ Parses .msg message files as produced by Microsoft Outlook.
 
 =head1 BUGS
 
-Not all data that's in the .msg file is converted. There simply are some
-parts whose meaning escapes me. Formatting of text messages will also be
-lost. GPG signed mail is not processed correctly.
+Not all data that is in the .msg file is converted. There are some
+parts whose meaning escapes me, although more documentation on MIME
+properties is available these days. Other parts do not make sense outside
+of Outlook and Exchange.
+
+GPG signed mail is not processed correctly. Neither are attachments of
+type 'appledoublefile'.
 
 It would be nice if we could write .MSG files too, but that will require
 quite a big rewrite.
@@ -66,7 +70,7 @@ my $DIR_TYPE = 1;
 my $FILE_TYPE = 2;
 
 use vars qw($VERSION);
-$VERSION = "0.908";
+$VERSION = "0.909";
 #
 # Descriptions partially based on mapitags.h
 #
