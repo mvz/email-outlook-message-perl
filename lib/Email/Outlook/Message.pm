@@ -805,16 +805,13 @@ sub _create_mime_rtf_body {
   } elsif ($magic == MAGIC_UNCOMPRESSED_RTF) {
     $buffer = substr $data, length BASE_BUFFER;
   } else {
-    warn "Incorrect magic number in RTF body.\n";
-    # TODO: What to return?
-    return;
+    carp "Incorrect magic number in RTF body.\n";
   }
   return Email::MIME->create(
     attributes => {
-      content_type => "text/rtf",
-      charset => "ISO-8859-1",
+      content_type => "application/rtf",
       disposition => "inline",
-      encoding => "8bit",
+      encoding => "base64",
     },
     body => $buffer
   );
