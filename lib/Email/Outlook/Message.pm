@@ -778,11 +778,11 @@ sub _create_mime_rtf_body {
   my $buffer;
 
   if ($magic == MAGIC_COMPRESSED_RTF) {
-    my $input_length = length($data);
-    my $in = 16; 
     $buffer = BASE_BUFFER;
+    my $output_length = length($buffer) + $rawsize;
     my @flags;
-    while ($in < $input_length) {
+    my $in = 16; 
+    while (length($buffer) < $output_length) {
       if (@flags == 0) {
 	@flags = split "", unpack "b8", substr $data, $in++, 1;
       }
@@ -795,9 +795,12 @@ sub _create_mime_rtf_body {
 	my $length = ($b & 0xf) + 2;
 	my $buflen = length $buffer;
 	my $longoffset = $buflen - ($buflen % 4096) + $offset;
-	if ($longoffset > $buflen) { $longoffset -= 4096; }
-	# FIXME: What if $longoffset + $length > $buflen?
-	$buffer .= substr $buffer, $longoffset, $length;
+	if ($longoffset >= $buflen) { $longoffset -= 4096; }
+	while ($length > 0) {
+	  $buffer .= substr $buffer, $longoffset, 1;
+	  $length--;
+	  $longoffset++;
+	}
 	$in += 2;
       }
     }
