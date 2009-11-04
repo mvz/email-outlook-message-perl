@@ -1,3 +1,4 @@
+# Test plain text message, jpeg attached.
 use strict;
 use warnings;
 use Test::More tests => 23;

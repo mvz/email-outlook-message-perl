@@ -9,11 +9,13 @@ t/basics.t
 t/files/gpg_signed.msg
 t/files/plain_jpeg_attached.msg
 t/files/plain_uc_unsent.msg
+t/files/plain_uc_wc_unsent.msg
 t/files/plain_unsent.msg
 t/gpg_signed.t
 t/internals.t
 t/plain_jpeg_attached.t
 t/plain_uc_unsent.t
+t/plain_uc_wc_unsent.t
 t/plain_unsent.t
 t/pod_coverage.t
 TODO

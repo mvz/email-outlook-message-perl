@@ -1,3 +1,4 @@
+# Test unsent plain text message, unicode encoded.
 use strict;
 use warnings;
 use Test::More tests => 14;
