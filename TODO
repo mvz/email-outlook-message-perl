@@ -1,5 +1,4 @@
 TODO
-- Process compressed RTF bodies
 - Process applefiles (using Mac::AppleSingleDouble?)
 - Process gpg-signed mail properly.
 - Create interface to internal properties.

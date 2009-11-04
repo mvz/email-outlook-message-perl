@@ -32,9 +32,16 @@ Parses .msg message files as produced by Microsoft Outlook.
 
 =head1 BUGS
 
-Not all data that's in the .msg file is converted. There simply are some
-parts whose meaning escapes me. Formatting of text messages will also be
-lost. GPG signed mail is not processed correctly.
+Not all data that is in the .msg file is converted. There are some
+parts whose meaning escapes me, although more documentation on MIME
+properties is available these days. Other parts do not make sense outside
+of Outlook and Exchange.
+
+GPG signed mail is not processed correctly. Neither are attachments of
+type 'appledoublefile'.
+
+It would be nice if we could write .MSG files too, but that will require
+quite a big rewrite.
 
 =head1 AUTHOR
 
@@ -63,7 +70,7 @@ my $DIR_TYPE = 1;
 my $FILE_TYPE = 2;
 
 use vars qw($VERSION);
-$VERSION = "0.908";
+$VERSION = "0.909";
 #
 # Descriptions partially based on mapitags.h
 #
@@ -108,7 +115,6 @@ my $skipproperties = {
   '0FFF' => "Address variant",
   # Content properties
   '1008' => "Summary or something",
-  '1009' => "RTF Compressed",
   '10F3' => "URL component name",
   # --
   '1046' => "From address variant",
@@ -147,17 +153,6 @@ my $skipproperties = {
   '8002' => "Unknown, binary data",
 };
 
-my $skipheaders = {
-  map { uc($_) => 1 }
-  "MIME-Version",
-  "Content-Type",
-  "Content-Transfer-Encoding",
-  "X-Mailer",
-  "X-Msgconvert",
-  "X-MS-Tnef-Correlator",
-  "X-MS-Has-Attach"
-};
-
 my $ENCODING_UNICODE = '001F';
 my $ENCODING_ASCII = '001E';
 my $ENCODING_BINARY = '0102';
@@ -179,8 +174,20 @@ my $MAP_ATTACHMENT_FILE = {
   '3716' => "DISPOSITION", # disposition
 };
 
+my $skipheaders = {
+  map { uc($_) => 1 }
+  "MIME-Version",
+  "Content-Type",
+  "Content-Transfer-Encoding",
+  "X-Mailer",
+  "X-Msgconvert",
+  "X-MS-Tnef-Correlator",
+  "X-MS-Has-Attach"
+};
+
 my $MAP_SUBITEM_FILE = {
   '1000' => "BODY_PLAIN",      # Body
+  '1009' => "BODY_RTF",	       # Compressed-RTF version of body
   '1013' => "BODY_HTML",       # HTML Version of body
   '0037' => "SUBJECT",         # Subject
   '0047' => "SUBMISSION_ID",   # Seems to contain the date
@@ -247,27 +254,26 @@ sub to_email_mime {
   my $bodymime;
   my $mime;
 
-  if ($self->{BODY_PLAIN} or not $self->{BODY_HTML}) {
-    $plain = $self->_create_mime_plain_body();
-  }
-  if ($self->{BODY_HTML}) {
-    $html = $self->_create_mime_html_body();
-  }
+  my @parts;
 
-  if ($html and $plain) {
-    $self->_clean_part_header($plain);
-    $self->_clean_part_header($html);
+  if ($self->{BODY_PLAIN}) { push(@parts, $self->_create_mime_plain_body()); }
+  if ($self->{BODY_HTML}) { push(@parts, $self->_create_mime_html_body()); }
+  if ($self->{BODY_RTF}) { push(@parts, $self->_create_mime_rtf_body()); }
+
+  if ((scalar @parts) > 1) {
+    map { $self->_clean_part_header($_) } @parts;
+
     $bodymime = Email::MIME->create(
       attributes => {
 	content_type => "multipart/alternative",
 	encoding => "8bit",
       },
-      parts => [$plain, $html]
+      parts => \@parts
     );
-  } elsif ($html) {
-    $bodymime = $html;
+  } elsif ((@parts) == 1) {
+    $bodymime = $parts[0];
   } else {
-    $bodymime = $plain;
+    $bodymime = $self->_create_mime_plain_body();
   }
 
   if (@{$self->{ATTACHMENTS}}>0) {
@@ -653,8 +659,8 @@ sub _SaveAttachment {
       content_type => "$mt->{discrete}/$mt->{composite}",
       %{$mt->{attributes}},
       encoding => $att->{ENCODING},
-      filename => ($att->{LONGNAME} ? $att->{LONGNAME} : $att->{SHORTNAME}),
-      name => ($att->{LONGNAME} ? $att->{LONGNAME} : $att->{SHORTNAME}),
+      filename => $att->{LONGNAME} || $att->{SHORTNAME},
+      name => $att->{LONGNAME} || $att->{LONGNAME},
       disposition => $att->{DISPOSITION},
     },
     header => [ 'Content-ID' => $att->{CONTENTID} ],
@@ -689,7 +695,7 @@ sub _Address {
 }
 
 # Find SMTP addresses for the given list of names
-sub _ExpandAddressList {
+sub _expand_address_list {
   my ($self, $names) = @_;
 
   return "" unless defined $names;
@@ -754,6 +760,69 @@ sub _create_mime_html_body {
     body => $body
   );
 }
+
+# Implementation based on the information in
+# http://www.freeutils.net/source/jtnef/rtfcompressed.jsp,
+# and the implementation in tnef version 1.4.5.
+use constant MAGIC_COMPRESSED_RTF => 0x75465a4c;
+use constant MAGIC_UNCOMPRESSED_RTF => 0x414c454d;
+use constant BASE_BUFFER =>
+  "{\\rtf1\\ansi\\mac\\deff0\\deftab720{\\fonttbl;}{\\f0\\fnil \\froman "
+  . "\\fswiss \\fmodern \\fscript \\fdecor MS Sans SerifSymbolArial"
+  . "Times New RomanCourier{\\colortbl\\red0\\green0\\blue0\n\r\\par "
+  . "\\pard\\plain\\f0\\fs20\\b\\i\\u\\tab\\tx";
+
+
+sub _create_mime_rtf_body {
+  my $self = shift;
+  my $data = $self->{BODY_RTF};
+
+  my ($size, $rawsize, $magic, $crc) = unpack "V4", substr $data, 0, 16;
+
+  my $buffer;
+
+  if ($magic == MAGIC_COMPRESSED_RTF) {
+    $buffer = BASE_BUFFER;
+    my $output_length = length($buffer) + $rawsize;
+    my @flags;
+    my $in = 16; 
+    while (length($buffer) < $output_length) {
+      if (@flags == 0) {
+	@flags = split "", unpack "b8", substr $data, $in++, 1;
+      }
+      my $flag = shift @flags;
+      if ($flag == "0") {
+	$buffer .= substr $data, $in++, 1;
+      } else {
+	my ($a, $b) = unpack "C2", substr $data, $in, 2;
+	my $offset = ($a << 4) | ($b >> 4);
+	my $length = ($b & 0xf) + 2;
+	my $buflen = length $buffer;
+	my $longoffset = $buflen - ($buflen % 4096) + $offset;
+	if ($longoffset >= $buflen) { $longoffset -= 4096; }
+	while ($length > 0) {
+	  $buffer .= substr $buffer, $longoffset, 1;
+	  $length--;
+	  $longoffset++;
+	}
+	$in += 2;
+      }
+    }
+    $buffer = substr $buffer, length BASE_BUFFER;
+  } elsif ($magic == MAGIC_UNCOMPRESSED_RTF) {
+    $buffer = substr $data, length BASE_BUFFER;
+  } else {
+    carp "Incorrect magic number in RTF body.\n";
+  }
+  return Email::MIME->create(
+    attributes => {
+      content_type => "application/rtf",
+      disposition => "inline",
+      encoding => "base64",
+    },
+    body => $buffer
+  );
+}
 # Copy original header data.
 # Note: This should contain the Date: header.
 sub _copy_header_data {
@@ -778,8 +847,8 @@ sub _SetHeaderFields {
   $self->_AddHeaderField($mime, 'Subject', $self->{SUBJECT});
   $self->_AddHeaderField($mime, 'From', $self->_Address("FROM"));
   #$self->_AddHeaderField($mime, 'Reply-To', $self->_Address("REPLYTO"));
-  $self->_AddHeaderField($mime, 'To', $self->_ExpandAddressList($self->{TO}));
-  $self->_AddHeaderField($mime, 'Cc', $self->_ExpandAddressList($self->{CC}));
+  $self->_AddHeaderField($mime, 'To', $self->_expand_address_list($self->{TO}));
+  $self->_AddHeaderField($mime, 'Cc', $self->_expand_address_list($self->{CC}));
   $self->_AddHeaderField($mime, 'Message-Id', $self->{MESSAGEID});
   $self->_AddHeaderField($mime, 'In-Reply-To', $self->{INREPLYTO});
   $self->_AddHeaderField($mime, 'References', $self->{REFERENCES});

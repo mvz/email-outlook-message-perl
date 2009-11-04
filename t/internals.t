@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 19;
+use Test::More tests => 31;
 use Email::Outlook::Message;
 #use MIME::Entity;
 use Email::MIME::Creator;
@@ -10,7 +10,10 @@ ok($p, 'Checking internal new');
 test_copy_header_data($p);
 test_is_transmittable_property($p);
 test_submission_id_date($p);
-test_to_email_mime($p);
+test_to_email_mime_with_no_parts($p);
+test_to_email_mime_with_plain_part($p);
+test_to_email_mime_with_html_part($p);
+test_to_email_mime_with_two_parts($p);
 
 # DONE
 
@@ -64,10 +67,42 @@ sub test_submission_id_date {
   is($p->_submission_id_date, "Mon, 28 Jul 2003 08:01:54 +0000");
 }
 
-sub test_to_email_mime {
+sub test_to_email_mime_with_no_parts {
   my $p = shift;
   $p->{BODY_PLAIN} = undef;
   $p->{BODY_HTML} = undef;
   ok(defined $p->to_email_mime);
 }
 
+sub test_to_email_mime_with_plain_part {
+  my $p = shift;
+  $p->{BODY_PLAIN} = "plain";
+  $p->{BODY_HTML} = undef;
+  my $m = $p->to_email_mime;
+  ok(defined $m);
+  ok(($m->parts) == 1);
+  is($m->body, "plain");
+  is($m->content_type, "text/plain; charset=\"ISO-8859-1\"");
+}
+
+sub test_to_email_mime_with_html_part {
+  my $p = shift;
+  $p->{BODY_PLAIN} = undef;
+  $p->{BODY_HTML} = "html";
+  my $m = $p->to_email_mime;
+  ok(defined $m);
+  ok(($m->parts) == 1);
+  is($m->body, "html");
+  is($m->content_type, "text/html");
+}
+
+sub test_to_email_mime_with_two_parts {
+  my $p = shift;
+  $p->{BODY_PLAIN} = "plain";
+  $p->{BODY_HTML} = "html";
+  my $m = $p->to_email_mime;
+  ok(defined $m);
+  ok(($m->parts) == 2);
+  is(($m->parts)[0]->body, "plain\n");
+  is(($m->parts)[1]->body, "html\n");
+}
