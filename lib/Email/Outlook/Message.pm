@@ -330,6 +330,7 @@ sub _process_prop_stream {
   } continue {
     $n += 16 ;
   }
+  return;
 }
 
 sub _propstream_map {
