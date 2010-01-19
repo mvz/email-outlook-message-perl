@@ -1,10 +1,15 @@
-# Test unsent plain text message, unicode encoded.
+# Test unsent plain text message, unicode encoded, with a non-ascii
+# codepoint ('wide character') in the body.
 use strict;
 use warnings;
+
+# Needed to recoginize UTF8 string literal for comparing the body.
+use utf8;
+
 use Test::More tests => 14;
 use Email::Outlook::Message;
 
-my $p = new Email::Outlook::Message('t/files/plain_uc_unsent.msg');
+my $p = new Email::Outlook::Message('t/files/plain_uc_wc_unsent.msg');
 ok($p, "Parsing succeeded");
 my $m = $p->to_email_mime;
 is(scalar($m->header_names), 6, "Six headers");
@@ -20,7 +25,7 @@ is(scalar(@parts), 2, "Two sub-parts");
 
 my $text = $parts[0];
 like($text->content_type, qr{^text/plain}, "Content type should be text/plain");
-is($text->body, "This is a test\nThe body is in plain text\n", "Check body");
+is($text->body, "This is a test\nThe body is in p汬ain text\n", "Check body");
 is(scalar($text->subparts), 0, "No sub-parts"); 
 
 my $rtf = $parts[1];

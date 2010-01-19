@@ -1,7 +1,67 @@
+package Email::Outlook::Message;
+=head1 NAME
+
+Email::Outlook::Message.pm - Read Outlook .msg files
+
+=head1 SYNOPSIS
+
+  use Email::Outlook::Message;
+
+  my $msg = new Email::Outlook::Message $filename, $verbose;
+  my $mime = $msg->to_email_mime;
+  $mime->as_string;
+
+=head1 DESCRIPTION
+
+Parses .msg message files as produced by Microsoft Outlook.
+
+=head1 METHODS
+
+=over 8
+
+=item B<new($msg, $verbose)>
+
+    Parse the file pointed at by $msg. Set $verbose to a true value to
+    print information about skipped parts of the .msg file on STDERR.
+
+=item B<to_email_mime>
+
+    Output result as an Email::MIME object.
+
+=back
+
+=head1 BUGS
+
+Not all data that is in the .msg file is converted. There are some
+parts whose meaning escapes me, although more documentation on MIME
+properties is available these days. Other parts do not make sense outside
+of Outlook and Exchange.
+
+GPG signed mail is not processed correctly. Neither are attachments of
+type 'appledoublefile'.
+
+It would be nice if we could write .MSG files too, but that will require
+quite a big rewrite.
+
+=head1 AUTHOR
+
+Matijs van Zuijlen, C<matijs@matijs.net>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2002, 2004, 2006--2009 by Matijs van Zuijlen
+
+This module is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
+
+=cut
+use vars qw($VERSION);
+$VERSION = "0.909";
 package Email::Outlook::Message::Base;
 use strict;
 use warnings;
 use Encode;
+use IO::String;
 use Carp;
 use OLE::Storage_Lite;
 
@@ -11,7 +71,7 @@ my $FILE_TYPE = 2;
 my $ENCODING_UNICODE = '001F';
 my $ENCODING_ASCII = '001E';
 my $ENCODING_BINARY = '0102';
-my $ENCODING_DIRECORY = '000D';
+my $ENCODING_DIRECTORY = '000D';
 
 my $KNOWN_ENCODINGS = {
   '000D' => 'Directory',
@@ -64,7 +124,7 @@ my $skipproperties = {
   '0FFF' => "Address variant",
   # Content properties
   '1008' => "Summary or something",
-  '1009' => "RTF Compressed",
+  '10F3' => "URL component name",
   # --
   '1046' => "From address variant",
   # 'Common property'
@@ -80,7 +140,8 @@ my $skipproperties = {
   '370A' => "Tag identifying application that supplied the attachment",
   '3713' => "Icon URL?",
   # 'Mail user'
-  '3A20' => "Address variant",
+  '3A00' => "Recipient's account name",
+  '3A20' => "Recipient's display name",
   # 3900 -- 39FF: 'Address book'
   '39FF' => "7 bit display name",
   # 'Display table properties'
@@ -147,7 +208,7 @@ sub property {
 
 sub _decode_mapi_property {
   my ($self, $encoding, $data) = @_;
-  if ($encoding eq $ENCODING_DIRECORY) {
+  if ($encoding eq $ENCODING_DIRECTORY) {
     die "Unexpected directory encoding";
   }
   if ($encoding ne $ENCODING_BINARY) {
@@ -238,10 +299,41 @@ sub _process_pps_file_entry {
 
   if (defined $property) {
     $self->set_mapi_property($property, [$encoding, $pps->{Data}]);
+  } elsif ($name eq '__properties_version1 0') {
+    $self->_process_prop_stream ($pps->{Data});
   } else {
     $self->_warn_about_unknown_file($pps);
   }
   return;
+}
+
+sub _process_prop_stream {
+  my ($self, $data) = @_;
+  my $map = $self->_propstream_map;
+  return unless $map;
+  my ($n, $len) = (32, length $data) ;
+
+  while ($n + 16 <= $len) {
+    my @f = unpack "v4", substr $data, $n, 8;
+    my $t = $map->{$f[1]} ;
+    # $f[2]: bit 1 -- mandatory, bit 2 -- readable, bit 3 -- writable
+    next unless $t and ($f[2] & 2) and $f[3] == 0;
+
+    # At the moment, there are only date entries ...
+    my @a = OLE::Storage_Lite::OLEDate2Local substr $data, $n + 8, 8;
+
+    if ($t eq 'DATE1ST') {
+      unshift @{$self->{PROPDATE}}, $self->_format_date(\@a) ;
+    } else { # DATE2ND
+      push @{$self->{PROPDATE}}, $self->_format_date(\@a) ;
+    }
+  } continue {
+    $n += 16 ;
+  }
+}
+
+sub _propstream_map {
+  return undef;
 }
 
 sub _check_pps_file_entries {
@@ -358,8 +450,8 @@ sub to_email_mime {
       content_type => "$mt->{discrete}/$mt->{composite}",
       %{$mt->{attributes}},
       encoding => $self->{ENCODING},
-      filename => ($self->{LONGNAME} ? $self->{LONGNAME} : $self->{SHORTNAME}),
-      name => ($self->{LONGNAME} ? $self->{LONGNAME} : $self->{SHORTNAME}),
+      filename => $self->{LONGNAME} || $self->{SHORTNAME},
+      name => $self->{LONGNAME} || $self->{LONGNAME},
       disposition => $self->{DISPOSITION},
     },
     header => [ 'Content-ID' => $self->{CONTENTID} ],
@@ -377,13 +469,44 @@ sub _process_subdirectory {
   my ($property, $encoding) = $self->_parse_item_name($name);
 
   if ($property eq '3701') { # Nested msg file
-    my $msgp = Email::Outlook::Message->_empty_new();
-    $msgp->_set_verbosity($self->{VERBOSE});
-    $msgp->_process_pps($pps);
+    my $is_msg = 1;
+    foreach my $child (@{$pps->{Child}}) {
+      my $name = $self->_get_pps_name($child);
+      unless (
+	$name =~ /^__recip/ or $name =~ /^__attach/
+	  or $name =~ /^__substg1/ or $name =~ /^__nameid/
+	  or $name =~ /^__properties/
+      ) {
+	$is_msg = 0;
+	last;
+      }
+    }
+    if ($is_msg) {
+      my $msgp = Email::Outlook::Message->_empty_new();
+      $msgp->_set_verbosity($self->{VERBOSE});
+      $msgp->_process_pps($pps);
 
-    $self->{DATA} = $msgp->to_email_mime->as_string;
-    $self->{MIMETYPE} = 'message/rfc822';
-    $self->{ENCODING} = '8bit';
+      $self->{DATA} = $msgp->to_email_mime->as_string;
+      $self->{MIMETYPE} = 'message/rfc822';
+      $self->{ENCODING} = '8bit';
+    } else {
+      foreach my $child (@{$pps->{Child}}) {
+	if ($child->{Type} == $FILE_TYPE) {
+	  foreach my $prop ("Time1st", "Time2nd") {
+	    $child->{$prop} = undef;
+	  }
+	}
+      }
+      my $nPps = OLE::Storage_Lite::PPS::Root->new(
+	$pps->{Time1st}, $pps->{Time2nd}, $pps->{Child});
+      my $data;
+      my $io = IO::String->new($data);
+      binmode($io);
+      $nPps->save($io, 1);
+      $self->{DATA} = $data;
+      #      $att->{MIMETYPE} = 'message/rfc822';
+      #	    $att->{ENCODING} = '8bit';
+    }
   } else {
     $self->_warn_about_unknown_directory($pps);
   }
@@ -391,55 +514,6 @@ sub _process_subdirectory {
 }
 
 package Email::Outlook::Message;
-=head1 NAME
-
-Email::Outlook::Message.pm - Read Outlook .msg files
-
-=head1 SYNOPSIS
-
-  use Email::Outlook::Message;
-
-  my $msg = new Email::Outlook::Message $filename, $verbose;
-  my $mime = $msg->to_email_mime;
-  $mime->as_string;
-
-=head1 DESCRIPTION
-
-Parses .msg message files as produced by Microsoft Outlook.
-
-=head1 METHODS
-
-=over 8
-
-=item B<new($msg, $verbose)>
-
-    Parse the file pointed at by $msg. Set $verbose to a true value to
-    print information about skipped parts of the .msg file on STDERR.
-
-=item B<to_email_mime>
-
-    Output result as an Email::MIME object.
-
-=back
-
-=head1 BUGS
-
-Not all data that's in the .msg file is converted. There simply are some
-parts whose meaning escapes me. Formatting of text messages will also be
-lost. GPG signed mail is not processed correctly.
-
-=head1 AUTHOR
-
-Matijs van Zuijlen, C<matijs@matijs.net>
-
-=head1 COPYRIGHT AND LICENSE
-
-Copyright 2002, 2004, 2006--2008 by Matijs van Zuijlen
-
-This module is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself. 
-
-=cut
 use strict;
 use warnings;
 use Email::Simple;
@@ -447,9 +521,6 @@ use Email::MIME::Creator;
 use POSIX;
 use Carp;
 use base 'Email::Outlook::Message::Base';
-
-use vars qw($VERSION);
-$VERSION = "0.905";
 
 my $skipheaders = {
   map { uc($_) => 1 }
@@ -464,6 +535,7 @@ my $skipheaders = {
 
 my $MAP_SUBITEM_FILE = {
   '1000' => "BODY_PLAIN",      # Body
+  '1009' => "BODY_RTF",	       # Compressed-RTF version of body
   '1013' => "BODY_HTML",       # HTML Version of body
   '0037' => "SUBJECT",         # Subject
   '0047' => "SUBMISSION_ID",   # Seems to contain the date
@@ -474,7 +546,15 @@ my $MAP_SUBITEM_FILE = {
   '0E04' => "TO",              # To: Names
   '0E03' => "CC",              # Cc: Names
   '1035' => "MESSAGEID",       # Message-Id
+  '1039' => "REFERENCES",      # References: Header
   '1042' => "INREPLYTO",       # In reply to Message-Id
+};
+
+my $MAP_PROPSTREAM_TAG = {
+    0x3007 => 'DATE2ND',    # Outlook created??
+    0x0039 => 'DATE1ST',    # Outlook sent date
+ #  0x0E06 => 'DATE2ND',    # more dates, not needed here
+ #  0x3008 => 'DATE2ND',
 };
 
 #
@@ -514,30 +594,26 @@ sub to_email_mime {
   my $bodymime;
   my $mime;
 
-  unless ($self->{BODY_HTML} or $self->{BODY_PLAIN}) {
-    $self->{BODY_PLAIN} = "";
-  }
-  if ($self->{BODY_PLAIN}) {
-    $plain = $self->_create_mime_plain_body();
-  }
-  if ($self->{BODY_HTML}) {
-    $html = $self->_create_mime_html_body();
-  }
+  my @parts;
 
-  if ($html and $plain) {
-    $self->_clean_part_header($plain);
-    $self->_clean_part_header($html);
+  if ($self->{BODY_PLAIN}) { push(@parts, $self->_create_mime_plain_body()); }
+  if ($self->{BODY_HTML}) { push(@parts, $self->_create_mime_html_body()); }
+  if ($self->{BODY_RTF}) { push(@parts, $self->_create_mime_rtf_body()); }
+
+  if ((scalar @parts) > 1) {
+    map { $self->_clean_part_header($_) } @parts;
+
     $bodymime = Email::MIME->create(
       attributes => {
 	content_type => "multipart/alternative",
 	encoding => "8bit",
       },
-      parts => [$plain, $html]
+      parts => \@parts
     );
-  } elsif ($html) {
-    $bodymime = $html;
+  } elsif ((@parts) == 1) {
+    $bodymime = $parts[0];
   } else {
-    $bodymime = $plain;
+    $bodymime = $self->_create_mime_plain_body();
   }
 
   if (@{$self->{ATTACHMENTS}}>0) {
@@ -588,6 +664,10 @@ sub _set_verbosity {
 
 sub _property_map {
   return $MAP_SUBITEM_FILE;
+}
+
+sub _propstream_map {
+  return $MAP_PROPSTREAM_TAG;
 }
 
 #
@@ -655,8 +735,8 @@ sub _extract_ole_date {
     # Make Date
     my $datearr;
     $datearr = $pps->{Time2nd};
-    $datearr = $pps->{Time1st} unless($datearr);
-    $self->{OLEDATE} = $self->_format_date($datearr) if $datearr;
+    $datearr = $pps->{Time1st} unless $datearr and @$datearr[0];
+    $self->{OLEDATE} = $self->_format_date($datearr) if $datearr and @$datearr[0];
   }
   return;
 }
@@ -725,6 +805,8 @@ sub _Address {
 sub _expand_address_list {
   my ($self, $names) = @_;
 
+  return "" unless defined $names;
+
   my @namelist = split /; */, $names;
   my @result;
   name: foreach my $name (@namelist) {
@@ -789,6 +871,69 @@ sub _create_mime_html_body {
     body => $body
   );
 }
+
+# Implementation based on the information in
+# http://www.freeutils.net/source/jtnef/rtfcompressed.jsp,
+# and the implementation in tnef version 1.4.5.
+use constant MAGIC_COMPRESSED_RTF => 0x75465a4c;
+use constant MAGIC_UNCOMPRESSED_RTF => 0x414c454d;
+use constant BASE_BUFFER =>
+  "{\\rtf1\\ansi\\mac\\deff0\\deftab720{\\fonttbl;}{\\f0\\fnil \\froman "
+  . "\\fswiss \\fmodern \\fscript \\fdecor MS Sans SerifSymbolArial"
+  . "Times New RomanCourier{\\colortbl\\red0\\green0\\blue0\n\r\\par "
+  . "\\pard\\plain\\f0\\fs20\\b\\i\\u\\tab\\tx";
+
+
+sub _create_mime_rtf_body {
+  my $self = shift;
+  my $data = $self->{BODY_RTF};
+
+  my ($size, $rawsize, $magic, $crc) = unpack "V4", substr $data, 0, 16;
+
+  my $buffer;
+
+  if ($magic == MAGIC_COMPRESSED_RTF) {
+    $buffer = BASE_BUFFER;
+    my $output_length = length($buffer) + $rawsize;
+    my @flags;
+    my $in = 16; 
+    while (length($buffer) < $output_length) {
+      if (@flags == 0) {
+	@flags = split "", unpack "b8", substr $data, $in++, 1;
+      }
+      my $flag = shift @flags;
+      if ($flag == "0") {
+	$buffer .= substr $data, $in++, 1;
+      } else {
+	my ($a, $b) = unpack "C2", substr $data, $in, 2;
+	my $offset = ($a << 4) | ($b >> 4);
+	my $length = ($b & 0xf) + 2;
+	my $buflen = length $buffer;
+	my $longoffset = $buflen - ($buflen % 4096) + $offset;
+	if ($longoffset >= $buflen) { $longoffset -= 4096; }
+	while ($length > 0) {
+	  $buffer .= substr $buffer, $longoffset, 1;
+	  $length--;
+	  $longoffset++;
+	}
+	$in += 2;
+      }
+    }
+    $buffer = substr $buffer, length BASE_BUFFER;
+  } elsif ($magic == MAGIC_UNCOMPRESSED_RTF) {
+    $buffer = substr $data, length BASE_BUFFER;
+  } else {
+    carp "Incorrect magic number in RTF body.\n";
+  }
+  return Email::MIME->create(
+    attributes => {
+      content_type => "application/rtf",
+      disposition => "inline",
+      encoding => "base64",
+    },
+    body => $buffer
+  );
+}
 # Copy original header data.
 # Note: This should contain the Date: header.
 sub _copy_header_data {
@@ -817,6 +962,7 @@ sub _SetHeaderFields {
   $self->_AddHeaderField($mime, 'Cc', $self->_expand_address_list($self->{CC}));
   $self->_AddHeaderField($mime, 'Message-Id', $self->{MESSAGEID});
   $self->_AddHeaderField($mime, 'In-Reply-To', $self->{INREPLYTO});
+  $self->_AddHeaderField($mime, 'References', $self->{REFERENCES});
 
   # Least preferred option to set the Date: header; this uses the date the
   # msg file was saved.
@@ -824,6 +970,9 @@ sub _SetHeaderFields {
 
   # Second preferred option: get it from the SUBMISSION_ID:
   $self->_AddHeaderField($mime, 'Date', $self->_submission_id_date());
+
+  # Most prefered option from the property list
+  $self->_AddHeaderField($mime, 'Date', $self->{PROPDATE}->[0]);
 
   # After this, we'll try getting the date from the original headers.
   return;
