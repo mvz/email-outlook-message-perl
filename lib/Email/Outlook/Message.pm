@@ -163,11 +163,12 @@ my $skipproperties = {
 };
 
 sub new {
-  my ($class, $pps) = @_;
+  my ($class, $pps, $verbose) = @_;
   my $self = bless {
     _pps_file_entries => {},
     _pps => $pps
   }, $class;
+  $self->_set_verbosity($verbose);
   $self->_process_pps($pps);
   return $self;
 }
@@ -371,6 +372,12 @@ sub _warn_about_skipped_property {
   return;
 }
 
+sub _set_verbosity {
+  my ($self, $verbosity) = @_;
+  $self->{VERBOSE} = $verbosity ? 1 : 0;
+  return;
+}
+
 package Email::Outlook::Message::AddressInfo;
 use strict;
 use warnings;
@@ -430,8 +437,8 @@ my $MAP_ATTACHMENT_FILE = {
 };
 
 sub new {
-  my ($class, $pps) = @_;
-  my $self = $class->SUPER::new($pps);
+  my ($class, $pps, $verbosity) = @_;
+  my $self = $class->SUPER::new($pps, $verbosity);
   bless $self, $class;
   $self->{MIMETYPE} ||= 'application/octet-stream';
   $self->{ENCODING} ||= 'base64';
@@ -641,12 +648,6 @@ sub to_email_mime {
   return $mime;
 }
 
-sub _set_verbosity {
-  my ($self, $verbosity) = @_;
-  $self->{VERBOSE} = $verbosity ? 1 : 0;
-  return;
-}
-
 #
 # Below are functions that walk the PPS tree. This is simply a tree walk.
 # It's not really recursive (except when an attachment contains a .msg
@@ -697,7 +698,8 @@ sub _process_subdirectory {
 sub _process_address {
   my ($self, $pps) = @_;
 
-  my $addr_info = new Email::Outlook::Message::AddressInfo($pps);
+  my $addr_info = new Email::Outlook::Message::AddressInfo($pps,
+    $self->{VERBOSE});
 
   push @{$self->{ADDRESSES}}, $addr_info;
   return;
@@ -709,7 +711,8 @@ sub _process_address {
 sub _process_attachment {
   my ($self, $pps) = @_;
 
-  my $attachment = new Email::Outlook::Message::Attachment($pps);
+  my $attachment = new Email::Outlook::Message::Attachment($pps,
+    $self->{VERBOSE});
   push @{$self->{ATTACHMENTS}}, $attachment;
   return;
 }
