@@ -68,17 +68,21 @@ use OLE::Storage_Lite;
 my $DIR_TYPE = 1;
 my $FILE_TYPE = 2;
 
+# Variable encodings
 my $ENCODING_UNICODE = '001F';
 my $ENCODING_ASCII = '001E';
 my $ENCODING_BINARY = '0102';
 my $ENCODING_DIRECTORY = '000D';
 
-my $KNOWN_ENCODINGS = {
+my $VARIABLE_ENCODINGS = {
   '000D' => 'Directory',
   '001F' => 'Unicode',
   '001E' => 'Ascii?',
   '0102' => 'Binary',
 };
+
+# Fixed encodings
+my $ENCODING_DATE = '0040';
 
 #
 # Descriptions partially based on mapitags.h
@@ -209,17 +213,21 @@ sub property {
 
 sub _decode_mapi_property {
   my ($self, $encoding, $data) = @_;
-  if ($encoding eq $ENCODING_DIRECTORY) {
-    die "Unexpected directory encoding";
-  }
-  if ($encoding ne $ENCODING_BINARY) {
+  if ($encoding eq $ENCODING_ASCII or $encoding eq $ENCODING_UNICODE) {
     if ($encoding eq $ENCODING_UNICODE) {
       $data = decode("UTF-16LE", $data);
     }
     $data =~ s/\000$//sg;
     $data =~ s/\r\n/\n/sg;
+    return $data
+  } elsif ($encoding eq $ENCODING_BINARY) {
+    return $data
+  } elsif ($encoding eq $ENCODING_DATE) {
+    my @a = OLE::Storage_Lite::OLEDate2Local $data;
+    return $self->_format_date(\@a);
   }
-  return $data;
+
+  die "Unexpected encoding $encoding";
 }
 
 sub _process_pps {
@@ -251,7 +259,7 @@ sub _parse_item_name {
     my ($property, $encoding) = ($1, $2);
     if ($encoding eq $ENCODING_UNICODE and not ($self->{HAS_UNICODE})) {
       $self->{HAS_UNICODE} = 1;
-    } elsif (not $KNOWN_ENCODINGS->{$encoding}) {
+    } elsif (not $VARIABLE_ENCODINGS->{$encoding}) {
       warn "Unknown encoding $encoding. Results may be strange or wrong.\n";
     }
     return ($property, $encoding);
@@ -310,44 +318,23 @@ sub _process_pps_file_entry {
 
 sub _process_prop_stream {
   my ($self, $data) = @_;
-  my $map = $self->_propstream_map;
-  return unless $map;
   my ($n, $len) = (32, length $data) ;
 
   while ($n + 16 <= $len) {
     my @f = unpack "v4", substr $data, $n, 8;
 
-    my $property = sprintf("%04X", $f[1]);
     my $encoding = sprintf("%04X", $f[0]);
 
-    $self->{VERBOSE}
-      and warn sprintf("Stream Property: %s:%s\n", $encoding, $property);
-
-    unless($KNOWN_ENCODINGS->{$encoding}) {
+    unless($VARIABLE_ENCODINGS->{$encoding}) {
+      my $property = sprintf("%04X", $f[1]);
       my $propdata = substr $data, $n+8, 8;
+      $self->{VERBOSE} and warn "Stream Property: $encoding:$property\n";
       $self->set_mapi_property($property, [$encoding, $propdata]);
-    }
-
-    my $t = $map->{$f[1]};
-    # $f[2]: bit 1 -- mandatory, bit 2 -- readable, bit 3 -- writable
-    next unless $t and ($f[2] & 2) and $f[3] == 0;
-
-    # At the moment, there are only date entries ...
-    my @a = OLE::Storage_Lite::OLEDate2Local substr $data, $n + 8, 8;
-
-    if ($t eq 'DATE1ST') {
-      unshift @{$self->{PROPDATE}}, $self->_format_date(\@a) ;
-    } else { # DATE2ND
-      push @{$self->{PROPDATE}}, $self->_format_date(\@a) ;
     }
   } continue {
     $n += 16 ;
   }
   return;
-}
-
-sub _propstream_map {
-  return undef;
 }
 
 sub _check_pps_file_entries {
@@ -388,6 +375,15 @@ sub _set_verbosity {
   my ($self, $verbosity) = @_;
   $self->{VERBOSE} = $verbosity ? 1 : 0;
   return;
+}
+
+sub _is_transmittable_property {
+  my ($self, $prop) = @_;
+  return 1 if $prop lt '0E00';
+  return 1 if $prop ge '1000' and $prop lt '6000';
+  return 1 if $prop ge '6800' and $prop lt '7C00';
+  return 1 if $prop ge '8000';
+  return 0;
 }
 
 package Email::Outlook::Message::AddressInfo;
@@ -555,7 +551,7 @@ my $skipheaders = {
 
 my $MAP_SUBITEM_FILE = {
   '1000' => "BODY_PLAIN",      # Body
-  '1009' => "BODY_RTF",	       # Compressed-RTF version of body
+  '1009' => "BODY_RTF",        # Compressed-RTF version of body
   '1013' => "BODY_HTML",       # HTML Version of body
   '0037' => "SUBJECT",         # Subject
   '0047' => "SUBMISSION_ID",   # Seems to contain the date
@@ -568,13 +564,8 @@ my $MAP_SUBITEM_FILE = {
   '1035' => "MESSAGEID",       # Message-Id
   '1039' => "REFERENCES",      # References: Header
   '1042' => "INREPLYTO",       # In reply to Message-Id
-};
-
-my $MAP_PROPSTREAM_TAG = {
-    0x3007 => 'DATE2ND',    # Outlook created??
-    0x0039 => 'DATE1ST',    # Outlook sent date
- #  0x0E06 => 'DATE2ND',    # more dates, not needed here
- #  0x3008 => 'DATE2ND',
+  '3007' => 'DATE2ND',         # Outlook created??
+  '0039' => 'DATE1ST',         # Outlook sent date
 };
 
 #
@@ -680,10 +671,6 @@ sub _property_map {
   return $MAP_SUBITEM_FILE;
 }
 
-sub _propstream_map {
-  return $MAP_PROPSTREAM_TAG;
-}
-
 #
 # Process a subdirectory. This is either an address or an attachment.
 #
@@ -732,15 +719,6 @@ sub _process_attachment {
 #
 # Helper functions
 #
-
-sub _is_transmittable_property {
-  my ($self, $prop) = @_;
-  return 1 if $prop lt '0E00';
-  return 1 if $prop ge '1000' and $prop lt '6000';
-  return 1 if $prop ge '6800' and $prop lt '7C00';
-  return 1 if $prop ge '8000';
-  return 0;
-}
 
 #
 # Extract time stamp of this OLE item (this is in GMT)
@@ -988,7 +966,8 @@ sub _SetHeaderFields {
   $self->_AddHeaderField($mime, 'Date', $self->_submission_id_date());
 
   # Most prefered option from the property list
-  $self->_AddHeaderField($mime, 'Date', $self->{PROPDATE}->[0]);
+  $self->_AddHeaderField($mime, 'Date', $self->{DATE2ND});
+  $self->_AddHeaderField($mime, 'Date', $self->{DATE1ST});
 
   # After this, we'll try getting the date from the original headers.
   return;
