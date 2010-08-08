@@ -309,23 +309,23 @@ sub _process_pps_file_entry {
   if (defined $property) {
     $self->set_mapi_property($property, [$encoding, $pps->{Data}]);
   } elsif ($name eq '__properties_version1 0') {
-    $self->_process_prop_stream ($pps->{Data});
+    $self->_process_property_stream ($pps->{Data});
   } else {
     $self->_warn_about_unknown_file($pps);
   }
   return;
 }
 
-sub _process_prop_stream {
+sub _process_property_stream {
   my ($self, $data) = @_;
-  my ($n, $len) = (32, length $data) ;
+  my ($n, $len) = ($self->_property_stream_header_length, length $data) ;
 
   while ($n + 16 <= $len) {
     my @f = unpack "v4", substr $data, $n, 8;
 
     my $encoding = sprintf("%04X", $f[0]);
 
-    unless($VARIABLE_ENCODINGS->{$encoding}) {
+    unless ($VARIABLE_ENCODINGS->{$encoding}) {
       my $property = sprintf("%04X", $f[1]);
       my $propdata = substr $data, $n+8, 8;
       $self->{VERBOSE} and warn "Stream Property: $encoding:$property\n";
@@ -428,6 +428,8 @@ sub display_address {
   return $addresstext;
 }
 
+sub _property_stream_header_length { 8 }
+
 package Email::Outlook::Message::Attachment;
 use strict;
 use warnings;
@@ -529,6 +531,8 @@ sub _process_subdirectory {
   return;
 }
 
+sub _property_stream_header_length { 8 }
+
 package Email::Outlook::Message;
 use strict;
 use warnings;
@@ -579,6 +583,8 @@ sub new {
 
   my $self = $class->_empty_new;
 
+  $self->{EMBEDDED} = 0;
+
   my $msg = OLE::Storage_Lite->new($file);
   my $pps = $msg->getPpsTree(1);
   $pps or croak "Parsing $file as OLE file failed";
@@ -594,7 +600,7 @@ sub _empty_new {
 
   return bless {
     ADDRESSES => [], ATTACHMENTS => [], FROM_ADDR_TYPE => "",
-    HAS_UNICODE => 0, VERBOSE => 0,
+    HAS_UNICODE => 0, VERBOSE => 0, EMBEDDED => 1
   }, $class;
 }
 
@@ -714,6 +720,15 @@ sub _process_attachment {
     $self->{VERBOSE});
   push @{$self->{ATTACHMENTS}}, $attachment;
   return;
+}
+
+#
+# Header length of the property stream depends on whether the Message
+# object is embedded or not.
+#
+sub _property_stream_header_length {
+  my $self = shift;
+  return ($self->{EMBEDDED} ?  24 : 32)
 }
 
 #
