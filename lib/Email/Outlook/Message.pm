@@ -317,14 +317,16 @@ sub _process_prop_stream {
   while ($n + 16 <= $len) {
     my @f = unpack "v4", substr $data, $n, 8;
 
-    $self->{VERBOSE}
-      and warn sprintf("Stream Property: %04X:%04X:%04X:%04X\n", $f[0], $f[1], $f[2], $f[3]);
-
     my $property = sprintf("%04X", $f[1]);
     my $encoding = sprintf("%04X", $f[0]);
-    my $propdata = substr $data, $n+8, 8;
 
-    $self->set_mapi_property($property, [$encoding, $propdata]);
+    $self->{VERBOSE}
+      and warn sprintf("Stream Property: %s:%s\n", $encoding, $property);
+
+    unless($KNOWN_ENCODINGS->{$encoding}) {
+      my $propdata = substr $data, $n+8, 8;
+      $self->set_mapi_property($property, [$encoding, $propdata]);
+    }
 
     my $t = $map->{$f[1]};
     # $f[2]: bit 1 -- mandatory, bit 2 -- readable, bit 3 -- writable
