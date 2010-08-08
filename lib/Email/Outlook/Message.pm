@@ -316,7 +316,14 @@ sub _process_prop_stream {
 
   while ($n + 16 <= $len) {
     my @f = unpack "v4", substr $data, $n, 8;
-    my $t = $map->{$f[1]} ;
+    my $t = $map->{$f[1]};
+
+    my $property = sprintf("%04X", $f[1]);
+    my $encoding = sprintf("%04X", $f[0]);
+    my $propdata = substr $data, $n+8, 8;
+
+    $self->set_mapi_property($property, [$encoding, $propdata]);
+
     # $f[2]: bit 1 -- mandatory, bit 2 -- readable, bit 3 -- writable
     next unless $t and ($f[2] & 2) and $f[3] == 0;
 
