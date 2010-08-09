@@ -62,6 +62,7 @@ use strict;
 use warnings;
 use Encode;
 use IO::String;
+use POSIX;
 use Carp;
 use OLE::Storage_Lite;
 
@@ -82,6 +83,9 @@ my $VARIABLE_ENCODINGS = {
 };
 
 # Fixed encodings
+my $ENCODING_INTEGER16 = '0002';
+my $ENCODING_INTEGER32 = '0003';
+my $ENCODING_BOOLEAN = '000B';
 my $ENCODING_DATE = '0040';
 
 #
@@ -241,6 +245,12 @@ sub _decode_mapi_property {
   } elsif ($encoding eq $ENCODING_DATE) {
     my @a = OLE::Storage_Lite::OLEDate2Local $data;
     return $self->_format_date(\@a);
+  } elsif ($encoding eq $ENCODING_INTEGER16) {
+    return unpack("v", substr($data, 0, 2));
+  } elsif ($encoding eq $ENCODING_INTEGER32) {
+    return unpack("V", substr($data, 0, 4));
+  } elsif ($encoding eq $ENCODING_BOOLEAN) {
+    return unpack("C", substr($data, 0, 1));
   }
 
   die "Unexpected encoding $encoding";
@@ -361,26 +371,22 @@ sub _check_pps_file_entries {
     if (my $key = $map->{$property}) {
       $self->{$key} = $self->_decode_mapi_property($encoding, $data);
     } else {
-      $self->_warn_about_skipped_property($property, $data);
+      $self->_warn_about_skipped_property($property, $encoding, $data);
     }
   }
 }
 
 sub _warn_about_skipped_property {
-  my ($self, $property, $data) = @_;
+  my ($self, $property, $encoding, $data) = @_;
 
   return unless $self->{VERBOSE};
-  if ($skipproperties->{$property}) {
-    warn "Skipping property $property ($skipproperties->{$property})\n";
-  } elsif (not $self->_is_transmittable_property($property)) {
-    warn "Skipping property $property (non-transmittable property)\n";
-  } elsif ($property =~ /^80/) {
-    warn "Skipping property $property (user-defined property)\n";
-  } elsif ($data eq "") {
-    warn "Unknown property $property (no data)\n";
-  } else {
-    warn "Unknown property $property\n";
+
+  my $value = $self->_decode_mapi_property($encoding, $data);
+  if (length($value) > 43) {
+    $value = substr($value, 0, 40) . "...";
   }
+  my $meaning = $skipproperties->{$property} || "UNKNOWN";
+  warn "Skipping property $property ($meaning): $value\n";
   return;
 }
 
@@ -397,6 +403,16 @@ sub _is_transmittable_property {
   return 1 if $prop ge '6800' and $prop lt '7C00';
   return 1 if $prop ge '8000';
   return 0;
+}
+
+#
+# Format a gmt date according to RFC822
+#
+sub _format_date {
+  my ($self, $datearr) = @_;
+  my $day = qw(Sun Mon Tue Wed Thu Fri Sat)[strftime("%w", @$datearr)];
+  my $month = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)[strftime("%m", @$datearr) - 1];
+  return strftime("$day, %d $month %Y %H:%M:%S +0000", @$datearr);
 }
 
 package Email::Outlook::Message::AddressInfo;
@@ -551,7 +567,6 @@ use strict;
 use warnings;
 use Email::Simple;
 use Email::MIME::Creator;
-use POSIX;
 use Carp;
 use base 'Email::Outlook::Message::Base';
 
@@ -761,16 +776,6 @@ sub _extract_ole_date {
     $self->{OLEDATE} = $self->_format_date($datearr) if $datearr and @$datearr[0];
   }
   return;
-}
-
-#
-# Format a gmt date according to RFC822
-#
-sub _format_date {
-  my ($self, $datearr) = @_;
-  my $day = qw(Sun Mon Tue Wed Thu Fri Sat)[strftime("%w", @$datearr)];
-  my $month = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)[strftime("%m", @$datearr) - 1];
-  return strftime("$day, %d $month %Y %H:%M:%S +0000", @$datearr);
 }
 
 # If we didn't get the date from the original header data, we may be able
