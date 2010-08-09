@@ -89,81 +89,97 @@ my $ENCODING_DATE = '0040';
 #
 my $skipproperties = {
   # Envelope properties
-  '000B' => "Conversation key?",
-  '001A' => "Type of message",
-  '003B' => "Sender address variant",
-  '003D' => "Contains 'Re: '",
-  '003F' => "'recieved by' id",
-  '0040' => "'recieved by' name",
+  '0002' => "Alternate Recipient Allowed",
+  '000B' => "Conversation Key",
+  '0017' => "Importance", #TODO: Use this.
+  '001A' => "Message Class",
+  '0023' => "Originator Delivery Report Requested",
+  '0026' => "Priority", #TODO: Use this.
+  '0029' => "Read Receipt Requested", #TODO: Use this.
+  '0036' => "Sensitivity", # As assessed by the Sender
+  '003B' => "Sent Representing Search Key",
+  '003D' => "Subject Prefix",
+  '003F' => "Received By EntryId",
+  '0040' => "Received By Name",
   # TODO: These two fields are part of the Sender field.
-  '0041' => "Sender variant address id",
-  '0042' => "Sender variant name",
-  '0043' => "'recieved representing' id",
-  '0044' => "'recieved representing' name",
-  '0046' => "Read receipt address id",
-  '0051' => "'recieved by' search key",
-  '0052' => "'recieved representing' search key",
-  '0053' => "Read receipt search key",
+  '0041' => "Sent Representing EntryId",
+  '0042' => "Sent Representing Name",
+  '0043' => "Received Representing EntryId",
+  '0044' => "Received Representing Name",
+  '0046' => "Read Receipt EntryId",
+  '0051' => "Received By Search Key",
+  '0052' => "Received Representing Search Key",
+  '0053' => "Read Receipt Search Key",
   # TODO: These two fields are part of the Sender field.
-  '0064' => "Sender variant address type",
-  '0065' => "Sender variant address",
-  '0070' => "Conversation topic",
-  '0071' => "Conversation index",
-  '0075' => "'recieved by' address type",
-  '0076' => "'recieved by' email address",
-  '0077' => "'recieved representing' address type",
-  '0078' => "'recieved representing' email address",
-  '007F' => "something like a message id",
+  '0064' => "Sent Representing Address Type",
+  '0065' => "Sent Representing Email Address",
+  '0070' => "Conversation Topic",
+  '0071' => "Conversation Index",
+  '0075' => "Received By Address Type",
+  '0076' => "Received By Email Address",
+  '0077' => "Received Representing Address Type",
+  '0078' => "Received Representing Email Address",
+  '007F' => "TNEF Correlation Key",
   # Recipient properties
-  '0C19' => "Reply address variant",
-  '0C1D' => "Reply address variant",
-  '0C1E' => "Reply address type",
+  '0C15' => "Recipient Type",
+  # Sender properties
+  '0C19' => "Sender Entry Id",
+  '0C1D' => "Sender Search Key",
+  '0C1E' => "Sender Address Type",
   # Non-transmittable properties
-  '0E02' => "?Should BCC be displayed",
-  '0E0A' => "sent mail id",
-  '0E1D' => "Subject w/o Re",
-  '0E27' => "64 bytes: Unknown",
-  '0FF6' => "Index",
-  '0FF9' => "Index",
-  '0FFF' => "Address variant",
+  '0E02' => "Display Bcc",
+  '0E0A' => "Sent Mail EntryId",
+  '0E1D' => "Normalized Subject",
+  '0E27' => "Security Descriptor",
+  '0FF6' => "Instance Key",
+  '0FF9' => "Record Key",
+  '0FFF' => "EntryId",
   # Content properties
-  '1008' => "Summary or something",
-  '10F3' => "URL component name",
-  # --
-  '1046' => "From address variant",
+  '1008' => "RTF Sync Body Tag",
+  '1046' => "Original Message ID",
+  '1080' => "Icon Index",
+  '10F3' => "URL Component Name",
   # 'Common property'
-  '3001' => "Display name",
+  '3000' => "Row Id",
+  '3001' => "Display Name",
   '3002' => "Address Type",
-  '300B' => "'Search key'",
+  '3008' => "Last Modification Time",
+  '300B' => "Search Key",
   # Message store info
+  '340D' => "Store Support Mask",
   '3414' => "Message Store Provider",
   # Attachment properties
-  '3702' => "Attachment encoding",
-  '3703' => "Attachment extension",
-  '3709' => "WMF with attachment rendering info", # Maybe an icon or something?
+  '3702' => "Attachment Encoding",
+  '3703' => "Attachment Extension",
+  # TODO: Use the following to distinguish between nested msg and other OLE
+  # stores.
+  '3705' => "Attachment Method",
+  '3709' => "Attachment Rendering", # Icon as WMF
   '370A' => "Tag identifying application that supplied the attachment",
-  '3713' => "Icon URL?",
-  # 'Mail user'
-  '3A00' => "Recipient's account name",
-  '3A20' => "Recipient's display name",
+  '370B' => "Attachment Rendering Position",
+  '3713' => "Attachment Content Location", #TODO: Use this?
   # 3900 -- 39FF: 'Address book'
-  '39FF' => "7 bit display name",
+  '3900' => "Address Book Display Type",
+  '39FF' => "Address Book 7 Bit Display Name",
+  # Mail User Object
+  '3A00' => "Account",
+  '3A20' => "Transmittable Display Name",
+  '3FDE' => "Internet Code Page", # TODO: Perhaps use this.
   # 'Display table properties'
-  '3FF8' => "Routing data?",
-  '3FF9' => "Routing data?",
-  '3FFA' => "Routing data?",
-  '3FFB' => "Routing data?",
+  '3FF8' => "Creator Name",
+  '3FF9' => "Creator EntryId",
+  '3FFA' => "Last Modifier Name",
+  '3FFB' => "Last Modifier EntryId",
   # 'Transport-defined envelope property'
-  '4029' => "Sender variant address type",
-  '402A' => "Sender variant address",
-  '402B' => "Sender variant name",
-  '5FF6' => "Recipient name",
-  '5FF7' => "Recipient address variant",
+  '4029' => "Read Receipt Address Type",
+  '402A' => "Read Receipt Email Address",
+  '402B' => "Read Receipt Name",
+  '5FF6' => "Recipient Display Name",
+  '5FF7' => "Recipient EntryId",
+  '5FFD' => "Recipient Flags",
+  '5FFF' => "Recipient Track Status",
   # 'Provider-defined internal non-transmittable property'
-  '6740' => "Unknown, binary data",
-  # User defined id's
-  '8000' => "Content Class",
-  '8002' => "Unknown, binary data",
+  '6740' => "Sent Mail Server EntryId",
 };
 
 sub new {
@@ -353,18 +369,15 @@ sub _check_pps_file_entries {
 sub _warn_about_skipped_property {
   my ($self, $property, $data) = @_;
 
+  return unless $self->{VERBOSE};
   if ($skipproperties->{$property}) {
-    $self->{VERBOSE}
-      and warn "Skipping property $property ($skipproperties->{$property})\n";
+    warn "Skipping property $property ($skipproperties->{$property})\n";
   } elsif (not $self->_is_transmittable_property($property)) {
-    $self->{VERBOSE}
-      and warn "Skipping property $property (non-transmittable property)\n";
+    warn "Skipping property $property (non-transmittable property)\n";
   } elsif ($property =~ /^80/) {
-    $self->{VERBOSE}
-      and warn "Skipping property $property (user-defined property)\n";
+    warn "Skipping property $property (user-defined property)\n";
   } elsif ($data eq "") {
-    $self->{VERBOSE}
-      and warn "Unknown property $property (no data)\n";
+    warn "Unknown property $property (no data)\n";
   } else {
     warn "Unknown property $property\n";
   }
@@ -568,7 +581,7 @@ my $MAP_SUBITEM_FILE = {
   '1035' => "MESSAGEID",       # Message-Id
   '1039' => "REFERENCES",      # References: Header
   '1042' => "INREPLYTO",       # In reply to Message-Id
-  '3007' => 'DATE2ND',         # Outlook created??
+  '3007' => 'DATE2ND',         # Creation Time
   '0039' => 'DATE1ST',         # Outlook sent date
 };
 
