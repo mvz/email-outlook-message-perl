@@ -56,9 +56,10 @@ it under the same terms as Perl itself.
 
 =cut
 use strict;
+use warnings;
 use 5.006;
 use vars qw($VERSION);
-$VERSION = "0.909";
+$VERSION = "0.910";
 
 package Email::Outlook::Message::Base;
 use strict;
