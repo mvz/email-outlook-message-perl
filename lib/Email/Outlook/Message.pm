@@ -395,21 +395,39 @@ sub _check_pps_file_entries {
   my ($self, $map) = @_;
 
   foreach my $property ($self->mapi_property_names) {
-    my ($encoding, $data) = @{$self->get_mapi_property($property)};
     if (my $key = $map->{$property}) {
-      $self->{$key} = $self->_decode_mapi_property($encoding, $data);
+      $self->_use_property($key, $property);
     } else {
-      $self->_warn_about_skipped_property($property, $encoding, $data);
+      $self->_warn_about_skipped_property($property);
     }
   }
 }
 
+sub _use_property {
+  my ($self, $key, $property) = @_;
+  my ($encoding, $data) = @{$self->get_mapi_property($property)};
+  $self->{$key} = $self->_decode_mapi_property($encoding, $data);
+
+  $self->{VERBOSE}
+    and $self->_log_property("Using   ", $property, $encoding, $key, $self->{$key});
+}
+
 sub _warn_about_skipped_property {
-  my ($self, $property, $encoding, $data) = @_;
+  my ($self, $property) = @_;
 
   return unless $self->{VERBOSE};
 
+  my ($encoding, $data) = @{$self->get_mapi_property($property)};
   my $value = $self->_decode_mapi_property($encoding, $data);
+  my $meaning = $skipproperties->{$property} || "UNKNOWN";
+
+  $self->_log_property("Skipping", $property, $encoding, $meaning, $value);
+  return;
+}
+
+sub _log_property {
+  my ($self, $message, $property, $encoding, $meaning, $value) = @_;
+
   $value = substr($value, 0, 50);
 
   if ($encoding eq $ENCODING_BINARY) {
@@ -424,9 +442,7 @@ sub _warn_about_skipped_property {
     $value = substr($value, 0, 41) . " ...";
   }
       
-  my $meaning = $skipproperties->{$property} || "UNKNOWN";
-  warn "Skipping property $encoding:$property ($meaning): $value\n";
-  return;
+  warn "$message property $encoding:$property ($meaning): $value\n";
 }
 
 sub _set_verbosity {
