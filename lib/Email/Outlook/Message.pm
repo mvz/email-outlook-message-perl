@@ -132,21 +132,43 @@ my $skipproperties = {
   '0C1E' => "Sender Address Type",
   # Non-transmittable properties
   '0E02' => "Display Bcc",
+  '0E06' => "Message Delivery Time",
+  '0E07' => "Message Flags",
   '0E0A' => "Sent Mail EntryId",
+  '0E0F' => "Responsibility",
+  '0E1B' => "Has Attachments",
   '0E1D' => "Normalized Subject",
+  '0E1F' => "RTF In Sync",
+  '0E20' => "Attachment Size",
+  '0E21' => "Attachment Number",
+  '0E23' => "Internet Article Number",
   '0E27' => "Security Descriptor",
+  '0E79' => "Trust Sender",
+  '0FF4' => "Access",
   '0FF6' => "Instance Key",
+  '0FF7' => "Access Level",
   '0FF9' => "Record Key",
+  '0FFE' => "Object Type",
   '0FFF' => "EntryId",
   # Content properties
+  '1006' => "RTF Sync Body CRC",
+  '1007' => "RTF Sync Body Count",
   '1008' => "RTF Sync Body Tag",
+  '1010' => "RTF Sync Prefix Count",
+  '1011' => "RTF Sync Trailing Count",
   '1046' => "Original Message ID",
   '1080' => "Icon Index",
+  '1081' => "Last Verb Executed",
+  '1082' => "Last Verb Execution Time",
   '10F3' => "URL Component Name",
+  '10F4' => "Attribute Hidden",
+  '10F5' => "Attribute System",
+  '10F6' => "Attribute Read Only",
   # 'Common property'
   '3000' => "Row Id",
   '3001' => "Display Name",
   '3002' => "Address Type",
+  '3007' => "Creation Time",
   '3008' => "Last Modification Time",
   '300B' => "Search Key",
   # Message store info
@@ -168,13 +190,19 @@ my $skipproperties = {
   # Mail User Object
   '3A00' => "Account",
   '3A20' => "Transmittable Display Name",
+  '3A40' => "Send Rich Info",
   '3FDE' => "Internet Code Page", # TODO: Perhaps use this.
   # 'Display table properties'
   '3FF8' => "Creator Name",
   '3FF9' => "Creator EntryId",
   '3FFA' => "Last Modifier Name",
   '3FFB' => "Last Modifier EntryId",
+  '3FFD' => "Message Code Page",
   # 'Transport-defined envelope property'
+  '4019' => "Sender Flags",
+  '401A' => "Sent Representing Flags",
+  '401B' => "Received By Flags",
+  '401C' => "Received Representing Flags",
   '4029' => "Read Receipt Address Type",
   '402A' => "Read Receipt Email Address",
   '402B' => "Read Receipt Name",
@@ -183,6 +211,7 @@ my $skipproperties = {
   '5FFD' => "Recipient Flags",
   '5FFF' => "Recipient Track Status",
   # 'Provider-defined internal non-transmittable property'
+  '664A' => "Has Named Properties",
   '6740' => "Sent Mail Server EntryId",
 };
 
@@ -354,7 +383,6 @@ sub _process_property_stream {
     unless ($VARIABLE_ENCODINGS->{$encoding}) {
       my $property = sprintf("%04X", $f[1]);
       my $propdata = substr $data, $n+8, 8;
-      $self->{VERBOSE} and warn "Stream Property: $encoding:$property\n";
       $self->set_mapi_property($property, [$encoding, $propdata]);
     }
   } continue {
@@ -382,11 +410,22 @@ sub _warn_about_skipped_property {
   return unless $self->{VERBOSE};
 
   my $value = $self->_decode_mapi_property($encoding, $data);
-  if (length($value) > 43) {
-    $value = substr($value, 0, 40) . "...";
+  $value = substr($value, 0, 50);
+
+  if ($encoding eq $ENCODING_BINARY) {
+    if ($value =~ /[[:print:]]/) {
+      $value =~ s/[^[:print:]]/./g;
+    } else {
+      $value =~ s/./sprintf("%02x ", ord($&))/sge;
+    }
   }
+
+  if (length($value) > 45) {
+    $value = substr($value, 0, 41) . " ...";
+  }
+      
   my $meaning = $skipproperties->{$property} || "UNKNOWN";
-  warn "Skipping property $property ($meaning): $value\n";
+  warn "Skipping property $encoding:$property ($meaning): $value\n";
   return;
 }
 
