@@ -5,6 +5,7 @@ my $build = Module::Build->new (
   license => 'perl',
   create_makefile_pl => 'traditional',
   requires => {
+    'perl' => 5.006,
     # Core modules
     'Carp' => '0',
     'Encode' => '0',

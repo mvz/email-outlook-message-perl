@@ -55,8 +55,10 @@ This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
 
 =cut
+use 5.006;
 use vars qw($VERSION);
 $VERSION = "0.909";
+
 package Email::Outlook::Message::Base;
 use strict;
 use warnings;
@@ -75,7 +77,7 @@ my $ENCODING_ASCII = '001E';
 my $ENCODING_BINARY = '0102';
 my $ENCODING_DIRECTORY = '000D';
 
-my $VARIABLE_ENCODINGS = {
+our $VARIABLE_ENCODINGS = {
   '000D' => 'Directory',
   '001F' => 'Unicode',
   '001E' => 'Ascii?',
@@ -91,7 +93,7 @@ my $ENCODING_DATE = '0040';
 #
 # Descriptions partially based on mapitags.h
 #
-my $skipproperties = {
+our $skipproperties = {
   # Envelope properties
   '0002' => "Alternate Recipient Allowed",
   '000B' => "Conversation Key",
@@ -476,7 +478,7 @@ use warnings;
 use Carp;
 use base 'Email::Outlook::Message::Base';
 
-my $MAP_ADDRESSITEM_FILE = {
+our $MAP_ADDRESSITEM_FILE = {
   '3001' => "NAME",          # Real name
   '3002' => "TYPE",          # Address type
   '403D' => "TYPE2",         # Address type TODO: Not used
@@ -521,7 +523,7 @@ use Carp;
 use Email::MIME::ContentType;
 use base 'Email::Outlook::Message::Base';
 
-my $MAP_ATTACHMENT_FILE = {
+our $MAP_ATTACHMENT_FILE = {
   '3701' => "DATA",        # Data
   '3704' => "SHORTNAME",   # Short file name
   '3707' => "LONGNAME",    # Long file name
@@ -625,7 +627,7 @@ use Email::MIME::Creator;
 use Carp;
 use base 'Email::Outlook::Message::Base';
 
-my $skipheaders = {
+our $skipheaders = {
   map { uc($_) => 1 }
   "MIME-Version",
   "Content-Type",
@@ -636,7 +638,7 @@ my $skipheaders = {
   "X-MS-Has-Attach"
 };
 
-my $MAP_SUBITEM_FILE = {
+our $MAP_SUBITEM_FILE = {
   '1000' => "BODY_PLAIN",      # Body
   '1009' => "BODY_RTF",        # Compressed-RTF version of body
   '1013' => "BODY_HTML",       # HTML Version of body
