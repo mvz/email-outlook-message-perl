@@ -405,6 +405,7 @@ sub _check_pps_file_entries {
       $self->_warn_about_skipped_property($property);
     }
   }
+  return;
 }
 
 sub _use_property {
@@ -414,6 +415,7 @@ sub _use_property {
 
   $self->{VERBOSE}
     and $self->_log_property("Using   ", $property, $encoding, $key, $self->{$key});
+  return;
 }
 
 sub _warn_about_skipped_property {
@@ -447,6 +449,7 @@ sub _log_property {
   }
 
   warn "$message property $encoding:$property ($meaning): $value\n";
+  return;
 }
 
 sub _set_verbosity {
@@ -497,12 +500,13 @@ sub _property_map {
 sub _process_subdirectory {
   my ($self, $pps) = @_;
   $self->_warn_about_unknown_directory($pps);
+  return;
 }
 
-sub name { return $_[0]->property('NAME') }
-sub address_type { return $_[0]->property('TYPE') }
-sub address { return $_[0]->property('ADDRESS') }
-sub smtp_address { return $_[0]->property('SMTPADDRESS') }
+sub name { my $self = shift; return $self->property('NAME') }
+sub address_type { my $self = shift; return $self->property('TYPE') }
+sub address { my $self = shift; return $self->property('ADDRESS') }
+sub smtp_address { my $self = shift; return $self->property('SMTPADDRESS') }
 
 sub display_address {
   my $self = shift;
@@ -516,7 +520,7 @@ sub display_address {
   return $addresstext;
 }
 
-sub _property_stream_header_length { 8 }
+sub _property_stream_header_length { return 8; }
 
 package Email::Outlook::Message::Attachment;
 use strict;
@@ -619,7 +623,7 @@ sub _process_subdirectory {
   return;
 }
 
-sub _property_stream_header_length { 8 }
+sub _property_stream_header_length { return 8; }
 
 package Email::Outlook::Message;
 use strict;
@@ -790,7 +794,7 @@ sub _process_subdirectory {
 sub _process_address {
   my ($self, $pps) = @_;
 
-  my $addr_info = new Email::Outlook::Message::AddressInfo($pps,
+  my $addr_info = Email::Outlook::Message::AddressInfo->new($pps,
     $self->{VERBOSE});
 
   push @{$self->{ADDRESSES}}, $addr_info;
@@ -803,7 +807,7 @@ sub _process_address {
 sub _process_attachment {
   my ($self, $pps) = @_;
 
-  my $attachment = new Email::Outlook::Message::Attachment($pps,
+  my $attachment = Email::Outlook::Message::Attachment->new($pps,
     $self->{VERBOSE});
   push @{$self->{ATTACHMENTS}}, $attachment;
   return;
@@ -961,9 +965,9 @@ sub _create_mime_html_body {
 # Implementation based on the information in
 # http://www.freeutils.net/source/jtnef/rtfcompressed.jsp,
 # and the implementation in tnef version 1.4.5.
-use constant MAGIC_COMPRESSED_RTF => 0x75465a4c;
-use constant MAGIC_UNCOMPRESSED_RTF => 0x414c454d;
-use constant BASE_BUFFER =>
+my $MAGIC_COMPRESSED_RTF = 0x75465a4c;
+my $MAGIC_UNCOMPRESSED_RTF = 0x414c454d;
+my $BASE_BUFFER =
   "{\\rtf1\\ansi\\mac\\deff0\\deftab720{\\fonttbl;}{\\f0\\fnil \\froman "
   . "\\fswiss \\fmodern \\fscript \\fdecor MS Sans SerifSymbolArial"
   . "Times New RomanCourier{\\colortbl\\red0\\green0\\blue0\n\r\\par "
@@ -978,8 +982,8 @@ sub _create_mime_rtf_body {
 
   my $buffer;
 
-  if ($magic == MAGIC_COMPRESSED_RTF) {
-    $buffer = BASE_BUFFER;
+  if ($magic == $MAGIC_COMPRESSED_RTF) {
+    $buffer = $BASE_BUFFER;
     my $output_length = length($buffer) + $rawsize;
     my @flags;
     my $in = 16;
@@ -1005,9 +1009,9 @@ sub _create_mime_rtf_body {
 	$in += 2;
       }
     }
-    $buffer = substr $buffer, length BASE_BUFFER;
-  } elsif ($magic == MAGIC_UNCOMPRESSED_RTF) {
-    $buffer = substr $data, length BASE_BUFFER;
+    $buffer = substr $buffer, length $BASE_BUFFER;
+  } elsif ($magic == $MAGIC_UNCOMPRESSED_RTF) {
+    $buffer = substr $data, length $BASE_BUFFER;
   } else {
     carp "Incorrect magic number in RTF body.\n";
   }
@@ -1029,7 +1033,7 @@ sub _copy_header_data {
 
   # The extra \n is neede for Email::Simple to pick up all headers.
   # This is a change in Email::Simple.
-  my $parsed = new Email::Simple($self->{HEAD} . "\n");
+  my $parsed = Email::Simple->new($self->{HEAD} . "\n");
 
   foreach my $tag (grep { !$skipheaders->{uc $_}} $parsed->header_names) {
     $mime->header_set($tag, $parsed->header($tag));
