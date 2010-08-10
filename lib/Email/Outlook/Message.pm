@@ -52,9 +52,10 @@ Matijs van Zuijlen, C<matijs@matijs.net>
 Copyright 2002, 2004, 2006--2009 by Matijs van Zuijlen
 
 This module is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself. 
+it under the same terms as Perl itself.
 
 =cut
+use strict;
 use 5.006;
 use vars qw($VERSION);
 $VERSION = "0.909";
@@ -256,10 +257,10 @@ sub property {
       my ($encoding, $data) = @{$prop};
       return $self->_decode_mapi_property($encoding, $data);
     } else {
-      return undef;
+      return;
     }
   }
-  return undef;
+  return;
 }
 
 sub _decode_mapi_property {
@@ -443,7 +444,7 @@ sub _log_property {
   if (length($value) > 45) {
     $value = substr($value, 0, 41) . " ...";
   }
-      
+
   warn "$message property $encoding:$property ($meaning): $value\n";
 }
 
@@ -914,7 +915,7 @@ sub _find_name_in_addresspool {
       return $address->display_address;
     }
   }
-  return undef;
+  return;
 }
 
 # TODO: Don't really want to need this!
@@ -980,7 +981,7 @@ sub _create_mime_rtf_body {
     $buffer = BASE_BUFFER;
     my $output_length = length($buffer) + $rawsize;
     my @flags;
-    my $in = 16; 
+    my $in = 16;
     while (length($buffer) < $output_length) {
       if (@flags == 0) {
 	@flags = split "", unpack "b8", substr $data, $in++, 1;
