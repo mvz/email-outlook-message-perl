@@ -1,10 +1,13 @@
+# Test unsent plain text message, single-byte encoded.
 use strict;
 use warnings;
-use Test::More tests => 14;
+use Test::More tests => 15;
 use Email::Outlook::Message;
 
 my $p = new Email::Outlook::Message('t/files/plain_unsent.msg');
 ok($p, "Parsing succeeded");
+like($p->get_mapi_property('1000')->[1], qr/This is a test..The body is in plain text/s);
+
 my $m = $p->to_email_mime;
 is(scalar($m->header_names), 6, "Six headers");
 

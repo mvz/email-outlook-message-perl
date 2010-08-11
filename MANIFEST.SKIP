@@ -16,3 +16,4 @@
 ^\.gitignore$
 ^tmp/
 ^debian/
+^docs/
