@@ -270,8 +270,8 @@ sub _decode_mapi_property {
     if ($encoding eq $ENCODING_UNICODE) {
       $data = decode("UTF-16LE", $data);
     }
-    $data =~ s/\000$//sg;
-    $data =~ s/\r\n/\n/sg;
+    $data =~ s/ \000 $ //sgx;
+    $data =~ s/ \r \n /\n/sgx;
     return $data
   } elsif ($encoding eq $ENCODING_BINARY) {
     return $data
@@ -307,14 +307,14 @@ sub _process_pps {
 sub _get_pps_name {
   my ($self, $pps) = @_;
   my $name = OLE::Storage_Lite::Ucs2Asc($pps->{Name});
-  $name =~ s/\W/ /g;
+  $name =~ s/ \W / /gx;
   return $name;
 }
 
 sub _parse_item_name {
   my ($self, $name) = @_;
 
-  if ($name =~ /^__substg1 0_(....)(....)$/) {
+  if ($name =~ / ^ __substg1 [ ] 0_ (....) (....) $ /x) {
     my ($property, $encoding) = ($1, $2);
     if ($encoding eq $ENCODING_UNICODE and not ($self->{HAS_UNICODE})) {
       $self->{HAS_UNICODE} = 1;
@@ -437,10 +437,10 @@ sub _log_property {
   $value = substr($value, 0, 50);
 
   if ($encoding eq $ENCODING_BINARY) {
-    if ($value =~ /[[:print:]]/) {
-      $value =~ s/[^[:print:]]/./g;
+    if ($value =~ / [[:print:]] /x) {
+      $value =~ s/ [^[:print:]] /./gx;
     } else {
-      $value =~ s/./sprintf("%02x ", ord($&))/sge;
+      $value =~ s/ . / sprintf("%02x ", ord($&)) /sgex;
     }
   }
 
@@ -583,9 +583,7 @@ sub _process_subdirectory {
     foreach my $child (@{$pps->{Child}}) {
       my $name = $self->_get_pps_name($child);
       unless (
-	$name =~ /^__recip/ or $name =~ /^__attach/
-	  or $name =~ /^__substg1/ or $name =~ /^__nameid/
-	  or $name =~ /^__properties/
+	$name =~ / ^ ( __recip | __attach | __substg1 | __nameid | __properties ) /x
       ) {
 	$is_msg = 0;
 	last;
@@ -851,7 +849,7 @@ sub _submission_id_date {
   my $self = shift;
 
   my $submission_id = $self->{SUBMISSION_ID} or return;
-  $submission_id =~ m/l=.*-(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)Z-.*/
+  $submission_id =~ m/ l=.*- (\d\d) (\d\d) (\d\d) (\d\d) (\d\d) (\d\d) Z-.* /x
     or return;
   my $year = $1;
   $year += 100 if $year < 20;
@@ -897,7 +895,7 @@ sub _expand_address_list {
 
   return "" unless defined $names;
 
-  my @namelist = split /; */, $names;
+  my @namelist = split / ; [ ]* /x, $names;
   my @result;
   name: foreach my $name (@namelist) {
     my $addresstext = $self->_find_name_in_addresspool($name);
@@ -927,7 +925,7 @@ sub _find_name_in_addresspool {
 sub _clean_part_header {
   my ($self, $part) = @_;
   $part->header_set('Date');
-  unless ($part->content_type =~ /^multipart\//) {
+  unless ($part->content_type =~ m{ ^ multipart / }x) {
     $part->header_set('MIME-Version')
   };
   return;
@@ -951,7 +949,7 @@ sub _create_mime_html_body {
   my $body = $self->{BODY_HTML};
   # FIXME: This makes sure tests succeed for now, but is not really
   # necessary for correct display in the mail reader.
-  $body =~ s/\r\n/\n/sg;
+  $body =~ s/ \r \n /\n/sgx;
   return Email::MIME->create(
     attributes => {
       content_type => "text/html",
