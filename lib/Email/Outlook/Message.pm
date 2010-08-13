@@ -458,15 +458,6 @@ sub _set_verbosity {
   return;
 }
 
-sub _is_transmittable_property {
-  my ($self, $prop) = @_;
-  return 1 if $prop lt '0E00';
-  return 1 if $prop ge '1000' and $prop lt '6000';
-  return 1 if $prop ge '6800' and $prop lt '7C00';
-  return 1 if $prop ge '8000';
-  return 0;
-}
-
 #
 # Format a gmt date according to RFC822
 #
