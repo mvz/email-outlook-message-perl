@@ -572,9 +572,8 @@ sub _process_subdirectory {
   if ($property eq '3701') { # Nested msg file
     my $is_msg = 1;
     foreach my $child (@{$pps->{Child}}) {
-      my $name = $self->_get_pps_name($child);
-      unless (
-	$name =~ / ^ ( __recip | __attach | __substg1 | __nameid | __properties ) /x
+      unless ($self->_get_pps_name($child) =~ / ^ ( __recip | __attach
+	| __substg1 | __nameid | __properties ) /x
       ) {
 	$is_msg = 0;
 	last;
@@ -687,7 +686,6 @@ sub _empty_new {
 sub to_email_mime {
   my $self = shift;
 
-  my ($plain, $html);
   my $bodymime;
   my $mime;
 
@@ -698,7 +696,7 @@ sub to_email_mime {
   if ($self->{BODY_RTF}) { push(@parts, $self->_create_mime_rtf_body()); }
 
   if ((scalar @parts) > 1) {
-    map { $self->_clean_part_header($_) } @parts;
+    for (@parts) { $self->_clean_part_header($_) };
 
     $bodymime = Email::MIME->create(
       attributes => {
@@ -981,7 +979,7 @@ sub _create_mime_rtf_body {
 	@flags = split "", unpack "b8", substr $data, $in++, 1;
       }
       my $flag = shift @flags;
-      if ($flag == "0") {
+      if ($flag eq "0") {
 	$buffer .= substr $data, $in++, 1;
       } else {
 	my ($a, $b) = unpack "C2", substr $data, $in, 2;
