@@ -286,7 +286,8 @@ sub _decode_mapi_property {
     return unpack("C", substr($data, 0, 1));
   }
 
-  die "Unexpected encoding $encoding";
+  warn "Unknown encoding $encoding\n";
+  return $data;
 }
 
 sub _process_pps {
