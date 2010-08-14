@@ -330,8 +330,6 @@ sub _parse_item_name {
     my ($property, $encoding) = ($1, $2);
     if ($encoding eq $ENCODING_UNICODE and not ($self->{HAS_UNICODE})) {
       $self->{HAS_UNICODE} = 1;
-    } elsif (not $VARIABLE_ENCODINGS->{$encoding}) {
-      warn "Unknown encoding $encoding. Results may be strange or wrong.\n";
     }
     return ($property, $encoding);
   } else {
