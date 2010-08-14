@@ -356,8 +356,7 @@ sub _warn_about_unknown_file {
 
   my $name = $self->_get_pps_name($pps);
 
-  if ($name eq '__properties_version1 0'
-      or $name eq 'Olk10SideProps_0001') {
+  if ($name eq 'Olk10SideProps_0001') {
     $self->{VERBOSE}
       and warn "Skipping FILE entry $name (Properties)\n";
   } else {
