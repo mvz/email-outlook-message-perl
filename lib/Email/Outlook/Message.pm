@@ -266,23 +266,34 @@ sub property {
 
 sub _decode_mapi_property {
   my ($self, $encoding, $data) = @_;
+
   if ($encoding eq $ENCODING_ASCII or $encoding eq $ENCODING_UNICODE) {
     if ($encoding eq $ENCODING_UNICODE) {
       $data = decode("UTF-16LE", $data);
     }
     $data =~ s/ \000 $ //sgx;
     $data =~ s/ \r \n /\n/sgx;
-    return $data
-  } elsif ($encoding eq $ENCODING_BINARY) {
-    return $data
-  } elsif ($encoding eq $ENCODING_DATE) {
+    return $data;
+  }
+
+  if ($encoding eq $ENCODING_BINARY) {
+    return $data;
+  }
+  
+  if ($encoding eq $ENCODING_DATE) {
     my @a = OLE::Storage_Lite::OLEDate2Local $data;
     return $self->_format_date(\@a);
-  } elsif ($encoding eq $ENCODING_INTEGER16) {
+  }
+  
+  if ($encoding eq $ENCODING_INTEGER16) {
     return unpack("v", substr($data, 0, 2));
-  } elsif ($encoding eq $ENCODING_INTEGER32) {
+  }
+  
+  if ($encoding eq $ENCODING_INTEGER32) {
     return unpack("V", substr($data, 0, 4));
-  } elsif ($encoding eq $ENCODING_BOOLEAN) {
+  }
+  
+  if ($encoding eq $ENCODING_BOOLEAN) {
     return unpack("C", substr($data, 0, 1));
   }
 
