@@ -423,7 +423,7 @@ sub _use_property {
   $self->{$key} = $self->_decode_mapi_property($encoding, $data);
 
   $self->{VERBOSE}
-    and $self->_log_property("Using   ", $property, $encoding, $key, $self->{$key});
+    and $self->_log_property("Using   ", $property, $key);
   return;
 }
 
@@ -432,17 +432,17 @@ sub _warn_about_skipped_property {
 
   return unless $self->{VERBOSE};
 
-  my ($encoding, $data) = @{$self->get_mapi_property($property)};
-  my $value = $self->_decode_mapi_property($encoding, $data);
   my $meaning = $skipproperties->{$property} || "UNKNOWN";
 
-  $self->_log_property("Skipping", $property, $encoding, $meaning, $value);
+  $self->_log_property("Skipping", $property, $meaning);
   return;
 }
 
 sub _log_property {
-  my ($self, $message, $property, $encoding, $meaning, $value) = @_;
+  my ($self, $message, $property, $meaning) = @_;
 
+  my ($encoding, $data) = @{$self->get_mapi_property($property)};
+  my $value = $self->_decode_mapi_property($encoding, $data);
   $value = substr($value, 0, 50);
 
   if ($encoding eq $ENCODING_BINARY) {
