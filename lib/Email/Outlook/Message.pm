@@ -1,4 +1,5 @@
 package Email::Outlook::Message;
+## no critic qw(ProhibitMultiplePackages)
 =head1 NAME
 
 Email::Outlook::Message.pm - Read Outlook .msg files
@@ -250,7 +251,7 @@ sub property {
   my ($self, $name) = @_;
   my $map = $self->_property_map;
   # TODO: Prepare reverse map instead of doing dumb lookup.
-  foreach my $code (keys %$map) {
+  foreach my $code (keys %{$map}) {
     my $key = $map->{$code};
     next unless $key eq $name;
     my $prop = $self->get_mapi_property($code);
@@ -472,9 +473,9 @@ sub _set_verbosity {
 #
 sub _format_date {
   my ($self, $datearr) = @_;
-  my $day = qw(Sun Mon Tue Wed Thu Fri Sat)[strftime("%w", @$datearr)];
-  my $month = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)[strftime("%m", @$datearr) - 1];
-  return strftime("$day, %d $month %Y %H:%M:%S +0000", @$datearr);
+  my $day = qw(Sun Mon Tue Wed Thu Fri Sat)[strftime("%w", @{$datearr})];
+  my $month = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)[strftime("%m", @{$datearr}) - 1];
+  return strftime("$day, %d $month %Y %H:%M:%S +0000", @{$datearr});
 }
 
 package Email::Outlook::Message::AddressInfo;
@@ -831,8 +832,8 @@ sub _extract_ole_date {
     # Make Date
     my $datearr;
     $datearr = $pps->{Time2nd};
-    $datearr = $pps->{Time1st} unless $datearr and @$datearr[0];
-    $self->{OLEDATE} = $self->_format_date($datearr) if $datearr and @$datearr[0];
+    $datearr = $pps->{Time1st} unless $datearr and $datearr->[0];
+    $self->{OLEDATE} = $self->_format_date($datearr) if $datearr and $datearr->[0];
   }
   return;
 }
@@ -911,7 +912,7 @@ sub _find_name_in_addresspool {
 
   my $addresspool = $self->{ADDRESSES};
 
-  foreach my $address (@$addresspool) {
+  foreach my $address (@{$addresspool}) {
     if ($name eq $address->name) {
       return $address->display_address;
     }
