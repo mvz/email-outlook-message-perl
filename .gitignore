@@ -9,6 +9,9 @@ pm_to_blib
 /MANIFEST.bak
 /Email-Outlook-Message-*.tar.gz
 /META.yml
+/META.json
+/MYMETA.yml
+/MYMETA.json
 /Makefile.PL
 /tmp
 /docs
