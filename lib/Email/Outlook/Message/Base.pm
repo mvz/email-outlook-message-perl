@@ -216,20 +216,20 @@ sub _decode_mapi_property {
   if ($encoding eq $ENCODING_BINARY) {
     return $data;
   }
-  
+
   if ($encoding eq $ENCODING_DATE) {
     my @a = OLE::Storage_Lite::OLEDate2Local $data;
     return $self->_format_date(\@a);
   }
-  
+
   if ($encoding eq $ENCODING_INTEGER16) {
     return unpack("v", substr($data, 0, 2));
   }
-  
+
   if ($encoding eq $ENCODING_INTEGER32) {
     return unpack("V", substr($data, 0, 4));
   }
-  
+
   if ($encoding eq $ENCODING_BOOLEAN) {
     return unpack("C", substr($data, 0, 1));
   }
