@@ -234,7 +234,7 @@ sub _decode_mapi_property {
     return unpack("C", substr($data, 0, 1));
   }
 
-  warn "Unknown encoding $encoding\n";
+  warn "Unhandled encoding $encoding\n";
   return $data;
 }
 
