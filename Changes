@@ -1,3 +1,8 @@
+0.911	2012-06-12
+
+  - Do not abort on unknown encodings. Warn instead.
+  - Replace deprecated dependencies with Email::MIME
+
 0.910	2010-08-10
 
   - Major refactoring into different packages/classes.
