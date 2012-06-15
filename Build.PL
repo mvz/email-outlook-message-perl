@@ -18,6 +18,9 @@ my $build = Module::Build->new (
     ## These we need for testing
     'IO::All' => '0',
     'Test::More' => '0',
+  },
+  configure_requires => {
+    'Module::Build' => 0.38
   }
 );
 $build->create_build_script;
