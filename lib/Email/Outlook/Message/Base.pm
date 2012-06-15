@@ -1,4 +1,40 @@
 package Email::Outlook::Message::Base;
+=head1 NAME
+
+Email::Outlook::Message::Base - Base parser for .msg files.
+
+=head1 NAME
+
+This is an internal module of Email::Outlook::Message.
+
+=head1 METHODS
+
+=over 8
+
+=item B<new($pps, $verbose)>
+
+=item B<get_mapi_property($code)>
+
+=item B<set_mapi_property($code, $data)>
+
+=item B<mapi_property_names()>
+
+=item B<property($name)>
+
+=back
+
+=head1 AUTHOR
+
+Matijs van Zuijlen, C<matijs@matijs.net>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2002, 2004, 2006--2010, 2012 by Matijs van Zuijlen
+
+This module is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut
 use strict;
 use warnings;
 use Encode;

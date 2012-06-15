@@ -1,4 +1,40 @@
 package Email::Outlook::Message::Attachment;
+=head1 NAME
+
+Email::Outlook::Message::Attachment - Handle attachment data in .msg files
+
+=head1 NAME
+
+This is an internal module of Email::Outlook::Message. It is a subclass of
+Email::Outlook::Message::Base.
+
+=head1 METHODS
+
+=over 8
+
+=item B<new($pps, $verbosity)>
+
+Create a new attachment object, using $pps as data source. Overrides the base
+method by setting some default values.
+
+=item B<to_email_mime()>
+
+Convert the attachment to an Email::MIME object.
+
+=back
+
+=head1 AUTHOR
+
+Matijs van Zuijlen, C<matijs@matijs.net>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2002, 2004, 2006--2010, 2012 by Matijs van Zuijlen
+
+This module is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+=cut
 use strict;
 use warnings;
 use Carp;
