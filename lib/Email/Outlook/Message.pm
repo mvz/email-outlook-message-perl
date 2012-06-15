@@ -1,5 +1,4 @@
 package Email::Outlook::Message;
-## no critic qw(ProhibitMultiplePackages)
 =head1 NAME
 
 Email::Outlook::Message.pm - Read Outlook .msg files
