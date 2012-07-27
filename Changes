@@ -1,3 +1,7 @@
+0.912	2012-07-27
+
+  - Fix test cases to deal with changed CRLF handling in Email::Simple
+
 0.911	2012-06-12
 
   - Do not abort on unknown encodings. Warn instead.
