@@ -1,3 +1,7 @@
+0.914	2013-08-11
+
+  - Add version number to all modules
+
 0.913	2013-08-11
 
   - Update dependency on Email::MIME and fix tests

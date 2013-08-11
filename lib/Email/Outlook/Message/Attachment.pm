@@ -39,7 +39,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = "0.913";
+$VERSION = "0.914";
 use Email::MIME::ContentType;
 use base 'Email::Outlook::Message::Base';
 
