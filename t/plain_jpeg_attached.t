@@ -26,7 +26,7 @@ is(scalar(@textparts), 2, "Two alternatives");
 my $plain = $textparts[0];
 like($plain->content_type, qr{^text/plain}, "Content type should be text/plain");
 is($plain->header("Content-Disposition"), "inline", "Testing content disposition");
-is($plain->body, "test\n\r\n", "Testing body");
+is($plain->body, "test\n", "Testing body");
 is(scalar($plain->subparts), 0, "No sub-parts"); 
 my $rtf = $textparts[1];
 like($rtf->content_type, qr{^application/rtf}, "Content type should be application/rtf");

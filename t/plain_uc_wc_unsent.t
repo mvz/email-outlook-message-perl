@@ -25,7 +25,7 @@ is(scalar(@parts), 2, "Two sub-parts");
 
 my $text = $parts[0];
 like($text->content_type, qr{^text/plain}, "Content type should be text/plain");
-is($text->body, "This is a test\nThe body is in p汬ain text\r\n", "Check body");
+is($text->body, "This is a test\nThe body is in p汬ain text", "Check body");
 is(scalar($text->subparts), 0, "No sub-parts"); 
 
 my $rtf = $parts[1];

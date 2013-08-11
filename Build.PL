@@ -12,7 +12,7 @@ my $build = Module::Build->new (
     'POSIX' => '0',
     # Others
     'Email::MIME::ContentType' => '1.014',
-    'Email::MIME' => '1.911',
+    'Email::MIME' => '1.923',
     'Email::Simple' => '2.102',
     'OLE::Storage_Lite' => '0.14',
     ## These we need for testing

@@ -84,6 +84,6 @@ sub test_to_email_mime_with_two_parts {
   my $m = $p->to_email_mime;
   ok(defined $m);
   ok(($m->parts) == 2);
-  is(($m->parts)[0]->body, "plain\r\n");
-  is(($m->parts)[1]->body, "html\r\n");
+  is(($m->parts)[0]->body, "plain");
+  is(($m->parts)[1]->body, "html");
 }
