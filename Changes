@@ -1,3 +1,7 @@
+0.913	2013-08-11
+
+  - Update dependency on Email::MIME and fix tests
+
 0.912	2012-07-27
 
   - Fix test cases to deal with changed CRLF handling in Email::Simple
