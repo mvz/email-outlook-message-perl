@@ -73,7 +73,7 @@ msgconvert.pl [options] <file.msg>...
 
 =item B<--mbox>
 
-    Deliver to the given mbox file instead of creating individual .mime
+    Deliver to the given mbox file instead of creating individual .eml
     files.
 
 =item B<--verbose>
@@ -87,7 +87,7 @@ msgconvert.pl [options] <file.msg>...
 =head1 DESCRIPTION
 
 This program will convert the messages contained in the Microsoft Outlook
-files <file.msg>...  to message/rfc822 files with extension .mime.
+files <file.msg>...  to message/rfc822 files with extension .eml.
 Alternatively, if the --mbox option is present, all messages will be put in
 the given mbox file.  This program will complain about unrecognized OLE
 parts in the input files on stderr.
@@ -95,7 +95,7 @@ parts in the input files on stderr.
 =head1 BUGS
 
 The program will not check whether output files already exist. Also, if you
-feed it "foo.MSG" and "foo.msg", you'll end up with one "foo.mime",
+feed it "foo.MSG" and "foo.msg", you'll end up with one "foo.eml",
 containing one of the messages.
 
 Not all data that's in the .MSG file is converted. There simply are some
