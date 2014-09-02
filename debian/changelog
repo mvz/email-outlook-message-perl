@@ -1,3 +1,9 @@
+libemail-outlook-message-perl (0.915-1) unstable; urgency=low
+
+  * New Upstream Release.
+
+ -- Matijs van Zuijlen <matijs@matijs.net>  Tue, 02 Sep 2014 19:02:52 +0200
+
 libemail-outlook-message-perl (0.910-1) unstable; urgency=low
 
   * New Upstream Release.
