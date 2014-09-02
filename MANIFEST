@@ -9,6 +9,7 @@ MANIFEST			This list of files
 META.json
 META.yml
 README
+script/msgconvert
 t/basics.t
 t/files/gpg_signed.msg
 t/files/plain_jpeg_attached.msg

@@ -29,7 +29,7 @@ Matijs van Zuijlen, C<matijs@matijs.net>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2002, 2004, 2006--2010, 2012 by Matijs van Zuijlen
+Copyright 2002--2014 by Matijs van Zuijlen
 
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -43,7 +43,7 @@ use POSIX;
 use Carp;
 use OLE::Storage_Lite;
 use vars qw($VERSION);
-$VERSION = "0.914";
+$VERSION = "0.915";
 
 my $DIR_TYPE = 1;
 my $FILE_TYPE = 2;

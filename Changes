@@ -1,21 +1,26 @@
-0.914	2013-08-11
+0.915   2014-09-02
+
+  - Consistently output CRLF line endings
+  - Include msgconvert in this distribution
+
+0.914   2013-08-11
 
   - Add version number to all modules
 
-0.913	2013-08-11
+0.913   2013-08-11
 
   - Update dependency on Email::MIME and fix tests
 
-0.912	2012-07-27
+0.912   2012-07-27
 
   - Fix test cases to deal with changed CRLF handling in Email::Simple
 
-0.911	2012-06-12
+0.911   2012-06-12
 
   - Do not abort on unknown encodings. Warn instead.
   - Replace deprecated dependencies with Email::MIME
 
-0.910	2010-08-10
+0.910   2010-08-10
 
   - Major refactoring into different packages/classes.
   - Read all fixed-length properties from all property streams.
@@ -24,11 +29,11 @@
     extension.
   - As a result, this module now requires perl 5.6.
 
-0.909	2009-10-11
+0.909   2009-10-11
 
   - Handle (compressed) RTF version of message body.
 
-0.908	2009-09-27
+0.908   2009-09-27
 
   Bugfix release:
   - Applying patches by Jordan Hrycaj for CPAN bug #49495:
@@ -37,35 +42,35 @@
     - Skip more properties
   - Actually handle References property
 
-0.907	2009-07-06
+0.907   2009-07-06
 
   - Handle nested OLE files that are not .MSG files
 
-0.906	2009-03-14
+0.906   2009-03-14
 
   - Make sure to_email_mime always returns a mime object, even if email has
     no body
 
-0.905	2008-11-29
+0.905   2008-11-29
 
   - Handle unicode data
 
-0.904	2008-02-28
+0.904   2008-02-28
 
   - Remove spurious loading of Email::Abstract
   - Code, comment and pod cleanups
   - Use Build.PL instead of Makefile.PL for building
   - Correct, locale independent, date formatting
 
-0.903	2007-10-14
+0.903   2007-10-14
 
   - Dates from OLE and submission_id are GMT, not local time
 
-0.902	2007-10-10
+0.902   2007-10-10
 
   - Fix pod coverage testing
 
-0.901	2007-09-24
+0.901   2007-09-24
 
   - First release as module on CPAN
   - Extracted main functionality of msgconvert.pl to
