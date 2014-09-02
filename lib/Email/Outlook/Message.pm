@@ -382,17 +382,13 @@ sub _create_mime_plain_body {
 
 sub _create_mime_html_body {
   my $self = shift;
-  my $body = $self->{BODY_HTML};
-  # FIXME: This makes sure tests succeed for now, but is not really
-  # necessary for correct display in the mail reader.
-  $body =~ s/ \r \n /\n/sgx;
   return Email::MIME->create(
     attributes => {
       content_type => "text/html",
       disposition => "inline",
       encoding => "8bit",
     },
-    body => $body
+    body => $self->{BODY_HTML}
   );
 }
 

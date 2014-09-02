@@ -247,7 +247,6 @@ sub _decode_mapi_property {
       $data = decode("UTF-16LE", $data);
     }
     $data =~ s/ \000 $ //sgx;
-    $data =~ s/ \r \n /\n/sgx;
     return $data;
   }
 
