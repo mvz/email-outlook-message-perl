@@ -59,7 +59,7 @@ use strict;
 use warnings;
 use 5.006;
 use vars qw($VERSION);
-$VERSION = "0.914";
+$VERSION = "0.915";
 
 use Email::Simple;
 use Email::MIME::Creator;

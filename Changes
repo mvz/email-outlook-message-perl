@@ -1,3 +1,8 @@
+0.915   2014-09-02
+
+  - Consistently output CRLF line endings
+  - Include msgconvert in this distribution
+
 0.914   2013-08-11
 
   - Add version number to all modules
