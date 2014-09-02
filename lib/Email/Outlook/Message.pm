@@ -49,7 +49,7 @@ Matijs van Zuijlen, C<matijs@matijs.net>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2002, 2004, 2006--2009 by Matijs van Zuijlen
+Copyright 2002, 2004, 2006--2010, 2012 by Matijs van Zuijlen
 
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -59,573 +59,12 @@ use strict;
 use warnings;
 use 5.006;
 use vars qw($VERSION);
-$VERSION = "0.910";
+$VERSION = "0.914";
 
-package Email::Outlook::Message::Base;
-use strict;
-use warnings;
-use Encode;
-use IO::String;
-use POSIX;
-use Carp;
-use OLE::Storage_Lite;
-
-my $DIR_TYPE = 1;
-my $FILE_TYPE = 2;
-
-# Variable encodings
-my $ENCODING_UNICODE = '001F';
-my $ENCODING_ASCII = '001E';
-my $ENCODING_BINARY = '0102';
-my $ENCODING_DIRECTORY = '000D';
-
-our $VARIABLE_ENCODINGS = {
-  '000D' => 'Directory',
-  '001F' => 'Unicode',
-  '001E' => 'Ascii?',
-  '0102' => 'Binary',
-};
-
-# Fixed encodings
-my $ENCODING_INTEGER16 = '0002';
-my $ENCODING_INTEGER32 = '0003';
-my $ENCODING_BOOLEAN = '000B';
-my $ENCODING_DATE = '0040';
-
-#
-# Descriptions partially based on mapitags.h
-#
-our $skipproperties = {
-  # Envelope properties
-  '0002' => "Alternate Recipient Allowed",
-  '000B' => "Conversation Key",
-  '0017' => "Importance", #TODO: Use this.
-  '001A' => "Message Class",
-  '0023' => "Originator Delivery Report Requested",
-  '0026' => "Priority", #TODO: Use this.
-  '0029' => "Read Receipt Requested", #TODO: Use this.
-  '0036' => "Sensitivity", # As assessed by the Sender
-  '003B' => "Sent Representing Search Key",
-  '003D' => "Subject Prefix",
-  '003F' => "Received By EntryId",
-  '0040' => "Received By Name",
-  # TODO: These two fields are part of the Sender field.
-  '0041' => "Sent Representing EntryId",
-  '0042' => "Sent Representing Name",
-  '0043' => "Received Representing EntryId",
-  '0044' => "Received Representing Name",
-  '0046' => "Read Receipt EntryId",
-  '0051' => "Received By Search Key",
-  '0052' => "Received Representing Search Key",
-  '0053' => "Read Receipt Search Key",
-  # TODO: These two fields are part of the Sender field.
-  '0064' => "Sent Representing Address Type",
-  '0065' => "Sent Representing Email Address",
-  '0070' => "Conversation Topic",
-  '0071' => "Conversation Index",
-  '0075' => "Received By Address Type",
-  '0076' => "Received By Email Address",
-  '0077' => "Received Representing Address Type",
-  '0078' => "Received Representing Email Address",
-  '007F' => "TNEF Correlation Key",
-  # Recipient properties
-  '0C15' => "Recipient Type",
-  # Sender properties
-  '0C19' => "Sender Entry Id",
-  '0C1D' => "Sender Search Key",
-  '0C1E' => "Sender Address Type",
-  # Non-transmittable properties
-  '0E02' => "Display Bcc",
-  '0E06' => "Message Delivery Time",
-  '0E07' => "Message Flags",
-  '0E0A' => "Sent Mail EntryId",
-  '0E0F' => "Responsibility",
-  '0E1B' => "Has Attachments",
-  '0E1D' => "Normalized Subject",
-  '0E1F' => "RTF In Sync",
-  '0E20' => "Attachment Size",
-  '0E21' => "Attachment Number",
-  '0E23' => "Internet Article Number",
-  '0E27' => "Security Descriptor",
-  '0E79' => "Trust Sender",
-  '0FF4' => "Access",
-  '0FF6' => "Instance Key",
-  '0FF7' => "Access Level",
-  '0FF9' => "Record Key",
-  '0FFE' => "Object Type",
-  '0FFF' => "EntryId",
-  # Content properties
-  '1006' => "RTF Sync Body CRC",
-  '1007' => "RTF Sync Body Count",
-  '1008' => "RTF Sync Body Tag",
-  '1010' => "RTF Sync Prefix Count",
-  '1011' => "RTF Sync Trailing Count",
-  '1046' => "Original Message ID",
-  '1080' => "Icon Index",
-  '1081' => "Last Verb Executed",
-  '1082' => "Last Verb Execution Time",
-  '10F3' => "URL Component Name",
-  '10F4' => "Attribute Hidden",
-  '10F5' => "Attribute System",
-  '10F6' => "Attribute Read Only",
-  # 'Common property'
-  '3000' => "Row Id",
-  '3001' => "Display Name",
-  '3002' => "Address Type",
-  '3007' => "Creation Time",
-  '3008' => "Last Modification Time",
-  '300B' => "Search Key",
-  # Message store info
-  '340D' => "Store Support Mask",
-  '3414' => "Message Store Provider",
-  # Attachment properties
-  '3702' => "Attachment Encoding",
-  '3703' => "Attachment Extension",
-  # TODO: Use the following to distinguish between nested msg and other OLE
-  # stores.
-  '3705' => "Attachment Method",
-  '3709' => "Attachment Rendering", # Icon as WMF
-  '370A' => "Tag identifying application that supplied the attachment",
-  '370B' => "Attachment Rendering Position",
-  '3713' => "Attachment Content Location", #TODO: Use this?
-  # 3900 -- 39FF: 'Address book'
-  '3900' => "Address Book Display Type",
-  '39FF' => "Address Book 7 Bit Display Name",
-  # Mail User Object
-  '3A00' => "Account",
-  '3A20' => "Transmittable Display Name",
-  '3A40' => "Send Rich Info",
-  '3FDE' => "Internet Code Page", # TODO: Perhaps use this.
-  # 'Display table properties'
-  '3FF8' => "Creator Name",
-  '3FF9' => "Creator EntryId",
-  '3FFA' => "Last Modifier Name",
-  '3FFB' => "Last Modifier EntryId",
-  '3FFD' => "Message Code Page",
-  # 'Transport-defined envelope property'
-  '4019' => "Sender Flags",
-  '401A' => "Sent Representing Flags",
-  '401B' => "Received By Flags",
-  '401C' => "Received Representing Flags",
-  '4029' => "Read Receipt Address Type",
-  '402A' => "Read Receipt Email Address",
-  '402B' => "Read Receipt Name",
-  '5FF6' => "Recipient Display Name",
-  '5FF7' => "Recipient EntryId",
-  '5FFD' => "Recipient Flags",
-  '5FFF' => "Recipient Track Status",
-  # 'Provider-defined internal non-transmittable property'
-  '664A' => "Has Named Properties",
-  '6740' => "Sent Mail Server EntryId",
-};
-
-sub new {
-  my ($class, $pps, $verbose) = @_;
-  my $self = bless {
-    _pps_file_entries => {},
-    _pps => $pps
-  }, $class;
-  $self->_set_verbosity($verbose);
-  $self->_process_pps($pps);
-  return $self;
-}
-
-sub mapi_property_names {
-  my $self = shift;
-  return keys %{$self->{_pps_file_entries}};
-}
-
-sub get_mapi_property {
-  my ($self, $code) = @_;
-  return $self->{_pps_file_entries}->{$code};
-}
-
-sub set_mapi_property {
-  my ($self, $code, $data) = @_;
-  $self->{_pps_file_entries}->{$code} = $data;
-  return;
-}
-
-sub property {
-  my ($self, $name) = @_;
-  my $map = $self->_property_map;
-  # TODO: Prepare reverse map instead of doing dumb lookup.
-  foreach my $code (keys %$map) {
-    my $key = $map->{$code};
-    next unless $key eq $name;
-    my $prop = $self->get_mapi_property($code);
-    if ($prop) {
-      my ($encoding, $data) = @{$prop};
-      return $self->_decode_mapi_property($encoding, $data);
-    } else {
-      return;
-    }
-  }
-  return;
-}
-
-sub _decode_mapi_property {
-  my ($self, $encoding, $data) = @_;
-  if ($encoding eq $ENCODING_ASCII or $encoding eq $ENCODING_UNICODE) {
-    if ($encoding eq $ENCODING_UNICODE) {
-      $data = decode("UTF-16LE", $data);
-    }
-    $data =~ s/\000$//sg;
-    $data =~ s/\r\n/\n/sg;
-    return $data
-  } elsif ($encoding eq $ENCODING_BINARY) {
-    return $data
-  } elsif ($encoding eq $ENCODING_DATE) {
-    my @a = OLE::Storage_Lite::OLEDate2Local $data;
-    return $self->_format_date(\@a);
-  } elsif ($encoding eq $ENCODING_INTEGER16) {
-    return unpack("v", substr($data, 0, 2));
-  } elsif ($encoding eq $ENCODING_INTEGER32) {
-    return unpack("V", substr($data, 0, 4));
-  } elsif ($encoding eq $ENCODING_BOOLEAN) {
-    return unpack("C", substr($data, 0, 1));
-  }
-
-  die "Unexpected encoding $encoding";
-}
-
-sub _process_pps {
-  my ($self, $pps) = @_;
-  foreach my $child (@{$pps->{Child}}) {
-    if ($child->{Type} == $DIR_TYPE) {
-      $self->_process_subdirectory($child);
-    } elsif ($child->{Type} == $FILE_TYPE) {
-      $self->_process_pps_file_entry($child);
-    } else {
-      carp "Unknown entry type: $child->{Type}";
-    }
-  }
-  $self->_check_pps_file_entries($self->_property_map);
-  return;
-}
-
-sub _get_pps_name {
-  my ($self, $pps) = @_;
-  my $name = OLE::Storage_Lite::Ucs2Asc($pps->{Name});
-  $name =~ s/\W/ /g;
-  return $name;
-}
-
-sub _parse_item_name {
-  my ($self, $name) = @_;
-
-  if ($name =~ /^__substg1 0_(....)(....)$/) {
-    my ($property, $encoding) = ($1, $2);
-    if ($encoding eq $ENCODING_UNICODE and not ($self->{HAS_UNICODE})) {
-      $self->{HAS_UNICODE} = 1;
-    } elsif (not $VARIABLE_ENCODINGS->{$encoding}) {
-      warn "Unknown encoding $encoding. Results may be strange or wrong.\n";
-    }
-    return ($property, $encoding);
-  } else {
-    return (undef, undef);
-  }
-}
-
-sub _warn_about_unknown_directory {
-  my ($self, $pps) = @_;
-
-  my $name = $self->_get_pps_name($pps);
-  if ($name eq '__nameid_version1 0') {
-    # TODO: Use this data to access so-called named properties.
-    $self->{VERBOSE}
-      and warn "Skipping DIR entry $name (Introductory stuff)\n";
-  } else {
-    warn "Unknown DIR entry $name\n";
-  }
-  return;
-}
-
-sub _warn_about_unknown_file {
-  my ($self, $pps) = @_;
-
-  my $name = $self->_get_pps_name($pps);
-
-  if ($name eq '__properties_version1 0'
-      or $name eq 'Olk10SideProps_0001') {
-    $self->{VERBOSE}
-      and warn "Skipping FILE entry $name (Properties)\n";
-  } else {
-    warn "Unknown FILE entry $name\n";
-  }
-  return;
-}
-
-#
-# Generic processor for a file entry: Inserts the entry's data into the
-# $self's mapi property list.
-#
-sub _process_pps_file_entry {
-  my ($self, $pps) = @_;
-  my $name = $self->_get_pps_name($pps);
-  my ($property, $encoding) = $self->_parse_item_name($name);
-
-  if (defined $property) {
-    $self->set_mapi_property($property, [$encoding, $pps->{Data}]);
-  } elsif ($name eq '__properties_version1 0') {
-    $self->_process_property_stream ($pps->{Data});
-  } else {
-    $self->_warn_about_unknown_file($pps);
-  }
-  return;
-}
-
-sub _process_property_stream {
-  my ($self, $data) = @_;
-  my ($n, $len) = ($self->_property_stream_header_length, length $data) ;
-
-  while ($n + 16 <= $len) {
-    my @f = unpack "v4", substr $data, $n, 8;
-
-    my $encoding = sprintf("%04X", $f[0]);
-
-    unless ($VARIABLE_ENCODINGS->{$encoding}) {
-      my $property = sprintf("%04X", $f[1]);
-      my $propdata = substr $data, $n+8, 8;
-      $self->set_mapi_property($property, [$encoding, $propdata]);
-    }
-  } continue {
-    $n += 16 ;
-  }
-  return;
-}
-
-sub _check_pps_file_entries {
-  my ($self, $map) = @_;
-
-  foreach my $property ($self->mapi_property_names) {
-    if (my $key = $map->{$property}) {
-      $self->_use_property($key, $property);
-    } else {
-      $self->_warn_about_skipped_property($property);
-    }
-  }
-}
-
-sub _use_property {
-  my ($self, $key, $property) = @_;
-  my ($encoding, $data) = @{$self->get_mapi_property($property)};
-  $self->{$key} = $self->_decode_mapi_property($encoding, $data);
-
-  $self->{VERBOSE}
-    and $self->_log_property("Using   ", $property, $encoding, $key, $self->{$key});
-}
-
-sub _warn_about_skipped_property {
-  my ($self, $property) = @_;
-
-  return unless $self->{VERBOSE};
-
-  my ($encoding, $data) = @{$self->get_mapi_property($property)};
-  my $value = $self->_decode_mapi_property($encoding, $data);
-  my $meaning = $skipproperties->{$property} || "UNKNOWN";
-
-  $self->_log_property("Skipping", $property, $encoding, $meaning, $value);
-  return;
-}
-
-sub _log_property {
-  my ($self, $message, $property, $encoding, $meaning, $value) = @_;
-
-  $value = substr($value, 0, 50);
-
-  if ($encoding eq $ENCODING_BINARY) {
-    if ($value =~ /[[:print:]]/) {
-      $value =~ s/[^[:print:]]/./g;
-    } else {
-      $value =~ s/./sprintf("%02x ", ord($&))/sge;
-    }
-  }
-
-  if (length($value) > 45) {
-    $value = substr($value, 0, 41) . " ...";
-  }
-
-  warn "$message property $encoding:$property ($meaning): $value\n";
-}
-
-sub _set_verbosity {
-  my ($self, $verbosity) = @_;
-  $self->{VERBOSE} = $verbosity ? 1 : 0;
-  return;
-}
-
-sub _is_transmittable_property {
-  my ($self, $prop) = @_;
-  return 1 if $prop lt '0E00';
-  return 1 if $prop ge '1000' and $prop lt '6000';
-  return 1 if $prop ge '6800' and $prop lt '7C00';
-  return 1 if $prop ge '8000';
-  return 0;
-}
-
-#
-# Format a gmt date according to RFC822
-#
-sub _format_date {
-  my ($self, $datearr) = @_;
-  my $day = qw(Sun Mon Tue Wed Thu Fri Sat)[strftime("%w", @$datearr)];
-  my $month = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)[strftime("%m", @$datearr) - 1];
-  return strftime("$day, %d $month %Y %H:%M:%S +0000", @$datearr);
-}
-
-package Email::Outlook::Message::AddressInfo;
-use strict;
-use warnings;
-use Carp;
-use base 'Email::Outlook::Message::Base';
-
-our $MAP_ADDRESSITEM_FILE = {
-  '3001' => "NAME",          # Real name
-  '3002' => "TYPE",          # Address type
-  '403D' => "TYPE2",         # Address type TODO: Not used
-  '3003' => "ADDRESS",       # Address
-  '403E' => "ADDRESS2",      # Address TODO: Not used
-  '39FE' => "SMTPADDRESS",   # SMTP Address variant
-};
-
-sub _property_map {
-  return $MAP_ADDRESSITEM_FILE;
-}
-
-# DIR Entries: There should be none.
-sub _process_subdirectory {
-  my ($self, $pps) = @_;
-  $self->_warn_about_unknown_directory($pps);
-}
-
-sub name { return $_[0]->property('NAME') }
-sub address_type { return $_[0]->property('TYPE') }
-sub address { return $_[0]->property('ADDRESS') }
-sub smtp_address { return $_[0]->property('SMTPADDRESS') }
-
-sub display_address {
-  my $self = shift;
-  my $addresstext = $self->name . " <";
-  if (defined ($self->smtp_address)) {
-    $addresstext .= $self->smtp_address;
-  } elsif ($self->address_type eq "SMTP") {
-    $addresstext .= $self->address;
-  }
-  $addresstext .= ">";
-  return $addresstext;
-}
-
-sub _property_stream_header_length { 8 }
-
-package Email::Outlook::Message::Attachment;
-use strict;
-use warnings;
-use Carp;
-use Email::MIME::ContentType;
-use base 'Email::Outlook::Message::Base';
-
-our $MAP_ATTACHMENT_FILE = {
-  '3701' => "DATA",        # Data
-  '3704' => "SHORTNAME",   # Short file name
-  '3707' => "LONGNAME",    # Long file name
-  '370E' => "MIMETYPE",    # mime type
-  '3712' => "CONTENTID",   # content-id
-  '3716' => "DISPOSITION", # disposition
-};
-
-sub new {
-  my ($class, $pps, $verbosity) = @_;
-  my $self = $class->SUPER::new($pps, $verbosity);
-  bless $self, $class;
-  $self->{MIMETYPE} ||= 'application/octet-stream';
-  $self->{ENCODING} ||= 'base64';
-  $self->{DISPOSITION} ||= 'attachment';
-  if ($self->{MIMETYPE} eq 'multipart/signed') {
-    $self->{ENCODING} = '8bit';
-  }
-  return $self;
-}
-
-sub to_email_mime {
-  my $self = shift;
-
-  my $mt = parse_content_type($self->{MIMETYPE});
-  my $m = Email::MIME->create(
-    attributes => {
-      content_type => "$mt->{discrete}/$mt->{composite}",
-      %{$mt->{attributes}},
-      encoding => $self->{ENCODING},
-      filename => $self->{LONGNAME} || $self->{SHORTNAME},
-      name => $self->{LONGNAME} || $self->{LONGNAME},
-      disposition => $self->{DISPOSITION},
-    },
-    header => [ 'Content-ID' => $self->{CONTENTID} ],
-    body => $self->{DATA});
-  return $m
-}
-
-sub _property_map {
-  return $MAP_ATTACHMENT_FILE;
-}
-
-sub _process_subdirectory {
-  my ($self, $pps) = @_;
-  my $name = $self->_get_pps_name($pps);
-  my ($property, $encoding) = $self->_parse_item_name($name);
-
-  if ($property eq '3701') { # Nested msg file
-    my $is_msg = 1;
-    foreach my $child (@{$pps->{Child}}) {
-      my $name = $self->_get_pps_name($child);
-      unless (
-	$name =~ /^__recip/ or $name =~ /^__attach/
-	  or $name =~ /^__substg1/ or $name =~ /^__nameid/
-	  or $name =~ /^__properties/
-      ) {
-	$is_msg = 0;
-	last;
-      }
-    }
-    if ($is_msg) {
-      my $msgp = Email::Outlook::Message->_empty_new();
-      $msgp->_set_verbosity($self->{VERBOSE});
-      $msgp->_process_pps($pps);
-
-      $self->{DATA} = $msgp->to_email_mime->as_string;
-      $self->{MIMETYPE} = 'message/rfc822';
-      $self->{ENCODING} = '8bit';
-    } else {
-      foreach my $child (@{$pps->{Child}}) {
-	if ($child->{Type} == $FILE_TYPE) {
-	  foreach my $prop ("Time1st", "Time2nd") {
-	    $child->{$prop} = undef;
-	  }
-	}
-      }
-      my $nPps = OLE::Storage_Lite::PPS::Root->new(
-	$pps->{Time1st}, $pps->{Time2nd}, $pps->{Child});
-      my $data;
-      my $io = IO::String->new($data);
-      binmode($io);
-      $nPps->save($io, 1);
-      $self->{DATA} = $data;
-      #      $att->{MIMETYPE} = 'message/rfc822';
-      #	    $att->{ENCODING} = '8bit';
-    }
-  } else {
-    $self->_warn_about_unknown_directory($pps);
-  }
-  return;
-}
-
-sub _property_stream_header_length { 8 }
-
-package Email::Outlook::Message;
-use strict;
-use warnings;
 use Email::Simple;
 use Email::MIME::Creator;
+use Email::Outlook::Message::AddressInfo;
+use Email::Outlook::Message::Attachment;
 use Carp;
 use base 'Email::Outlook::Message::Base';
 
@@ -694,7 +133,6 @@ sub _empty_new {
 sub to_email_mime {
   my $self = shift;
 
-  my ($plain, $html);
   my $bodymime;
   my $mime;
 
@@ -705,7 +143,7 @@ sub to_email_mime {
   if ($self->{BODY_RTF}) { push(@parts, $self->_create_mime_rtf_body()); }
 
   if ((scalar @parts) > 1) {
-    map { $self->_clean_part_header($_) } @parts;
+    for (@parts) { $self->_clean_part_header($_) };
 
     $bodymime = Email::MIME->create(
       attributes => {
@@ -790,7 +228,7 @@ sub _process_subdirectory {
 sub _process_address {
   my ($self, $pps) = @_;
 
-  my $addr_info = new Email::Outlook::Message::AddressInfo($pps,
+  my $addr_info = Email::Outlook::Message::AddressInfo->new($pps,
     $self->{VERBOSE});
 
   push @{$self->{ADDRESSES}}, $addr_info;
@@ -803,7 +241,7 @@ sub _process_address {
 sub _process_attachment {
   my ($self, $pps) = @_;
 
-  my $attachment = new Email::Outlook::Message::Attachment($pps,
+  my $attachment = Email::Outlook::Message::Attachment->new($pps,
     $self->{VERBOSE});
   push @{$self->{ATTACHMENTS}}, $attachment;
   return;
@@ -831,8 +269,8 @@ sub _extract_ole_date {
     # Make Date
     my $datearr;
     $datearr = $pps->{Time2nd};
-    $datearr = $pps->{Time1st} unless $datearr and @$datearr[0];
-    $self->{OLEDATE} = $self->_format_date($datearr) if $datearr and @$datearr[0];
+    $datearr = $pps->{Time1st} unless $datearr and $datearr->[0];
+    $self->{OLEDATE} = $self->_format_date($datearr) if $datearr and $datearr->[0];
   }
   return;
 }
@@ -847,7 +285,7 @@ sub _submission_id_date {
   my $self = shift;
 
   my $submission_id = $self->{SUBMISSION_ID} or return;
-  $submission_id =~ m/l=.*-(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)Z-.*/
+  $submission_id =~ m/ l=.*- (\d\d) (\d\d) (\d\d) (\d\d) (\d\d) (\d\d) Z-.* /x
     or return;
   my $year = $1;
   $year += 100 if $year < 20;
@@ -893,7 +331,7 @@ sub _expand_address_list {
 
   return "" unless defined $names;
 
-  my @namelist = split /; */, $names;
+  my @namelist = split / ; [ ]* /x, $names;
   my @result;
   name: foreach my $name (@namelist) {
     my $addresstext = $self->_find_name_in_addresspool($name);
@@ -911,7 +349,7 @@ sub _find_name_in_addresspool {
 
   my $addresspool = $self->{ADDRESSES};
 
-  foreach my $address (@$addresspool) {
+  foreach my $address (@{$addresspool}) {
     if ($name eq $address->name) {
       return $address->display_address;
     }
@@ -923,7 +361,7 @@ sub _find_name_in_addresspool {
 sub _clean_part_header {
   my ($self, $part) = @_;
   $part->header_set('Date');
-  unless ($part->content_type =~ /^multipart\//) {
+  unless ($part->content_type =~ m{ ^ multipart / }x) {
     $part->header_set('MIME-Version')
   };
   return;
@@ -944,26 +382,22 @@ sub _create_mime_plain_body {
 
 sub _create_mime_html_body {
   my $self = shift;
-  my $body = $self->{BODY_HTML};
-  # FIXME: This makes sure tests succeed for now, but is not really
-  # necessary for correct display in the mail reader.
-  $body =~ s/\r\n/\n/sg;
   return Email::MIME->create(
     attributes => {
       content_type => "text/html",
       disposition => "inline",
       encoding => "8bit",
     },
-    body => $body
+    body => $self->{BODY_HTML}
   );
 }
 
 # Implementation based on the information in
 # http://www.freeutils.net/source/jtnef/rtfcompressed.jsp,
 # and the implementation in tnef version 1.4.5.
-use constant MAGIC_COMPRESSED_RTF => 0x75465a4c;
-use constant MAGIC_UNCOMPRESSED_RTF => 0x414c454d;
-use constant BASE_BUFFER =>
+my $MAGIC_COMPRESSED_RTF = 0x75465a4c;
+my $MAGIC_UNCOMPRESSED_RTF = 0x414c454d;
+my $BASE_BUFFER =
   "{\\rtf1\\ansi\\mac\\deff0\\deftab720{\\fonttbl;}{\\f0\\fnil \\froman "
   . "\\fswiss \\fmodern \\fscript \\fdecor MS Sans SerifSymbolArial"
   . "Times New RomanCourier{\\colortbl\\red0\\green0\\blue0\n\r\\par "
@@ -978,8 +412,8 @@ sub _create_mime_rtf_body {
 
   my $buffer;
 
-  if ($magic == MAGIC_COMPRESSED_RTF) {
-    $buffer = BASE_BUFFER;
+  if ($magic == $MAGIC_COMPRESSED_RTF) {
+    $buffer = $BASE_BUFFER;
     my $output_length = length($buffer) + $rawsize;
     my @flags;
     my $in = 16;
@@ -988,7 +422,7 @@ sub _create_mime_rtf_body {
 	@flags = split "", unpack "b8", substr $data, $in++, 1;
       }
       my $flag = shift @flags;
-      if ($flag == "0") {
+      if ($flag eq "0") {
 	$buffer .= substr $data, $in++, 1;
       } else {
 	my ($a, $b) = unpack "C2", substr $data, $in, 2;
@@ -1005,9 +439,9 @@ sub _create_mime_rtf_body {
 	$in += 2;
       }
     }
-    $buffer = substr $buffer, length BASE_BUFFER;
-  } elsif ($magic == MAGIC_UNCOMPRESSED_RTF) {
-    $buffer = substr $data, length BASE_BUFFER;
+    $buffer = substr $buffer, length $BASE_BUFFER;
+  } elsif ($magic == $MAGIC_UNCOMPRESSED_RTF) {
+    $buffer = substr $data, length $BASE_BUFFER;
   } else {
     carp "Incorrect magic number in RTF body.\n";
   }
@@ -1029,7 +463,7 @@ sub _copy_header_data {
 
   # The extra \n is neede for Email::Simple to pick up all headers.
   # This is a change in Email::Simple.
-  my $parsed = new Email::Simple($self->{HEAD} . "\n");
+  my $parsed = Email::Simple->new($self->{HEAD} . "\n");
 
   foreach my $tag (grep { !$skipheaders->{uc $_}} $parsed->header_names) {
     $mime->header_set($tag, $parsed->header($tag));

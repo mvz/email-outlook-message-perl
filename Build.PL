@@ -12,13 +12,15 @@ my $build = Module::Build->new (
     'POSIX' => '0',
     # Others
     'Email::MIME::ContentType' => '1.014',
-    'Email::MIME::Modifier' => '1.442',
-    'Email::MIME::Creator' => '1.454',
-    'Email::Simple' => '2.003',
+    'Email::MIME' => '1.923',
+    'Email::Simple' => '2.102',
     'OLE::Storage_Lite' => '0.14',
     ## These we need for testing
     'IO::All' => '0',
     'Test::More' => '0',
+  },
+  configure_requires => {
+    'Module::Build' => 0.38
   }
 );
 $build->create_build_script;
