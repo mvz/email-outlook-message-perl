@@ -39,7 +39,7 @@ HEADER
   my @new_tags = $mime->header_names;
   is_deeply([sort @new_tags], [sort @expected_tags],
     'Are the right headers inserted?');
-  isnt($mime->header('MIME-Version'), 'ignore'); 
+  isnt($mime->header('MIME-Version'), 'ignore');
 }
 
 sub test_submission_id_date {

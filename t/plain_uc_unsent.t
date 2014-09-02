@@ -16,12 +16,12 @@ is($m->header("To"), "Someone Else <someone\@somewhere\.com>", "Testing to");
 
 like($m->content_type, qr{^multipart/alternative}, "Content type should be multipart/alternative");
 my @parts = $m->subparts;
-is(scalar(@parts), 2, "Two sub-parts"); 
+is(scalar(@parts), 2, "Two sub-parts");
 
 my $text = $parts[0];
 like($text->content_type, qr{^text/plain}, "Content type should be text/plain");
 is($text->body, "This is a test\r\nThe body is in plain text", "Check body");
-is(scalar($text->subparts), 0, "No sub-parts"); 
+is(scalar($text->subparts), 0, "No sub-parts");
 
 my $rtf = $parts[1];
 like($rtf->content_type, qr{^application/rtf}, "Content type should be application/rtf");
@@ -35,4 +35,4 @@ is($rtf->body, "{\\rtf1\\ansi\\ansicpg1252\\fromtext \\deff0{\\fonttbl\n\r"
   . "\\uc1\\pard\\plain\\deftab360 \\f0\\fs20 This is a test\\par\n\r"
   . "The body is in plain text\\par\n\r"
   . "}", "Check RTF");
-is(scalar($rtf->subparts), 0, "No sub-parts"); 
+is(scalar($rtf->subparts), 0, "No sub-parts");

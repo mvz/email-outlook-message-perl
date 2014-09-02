@@ -7,4 +7,3 @@ eval {
   my $p = Email::Outlook::Message->new();
 };
 like($@, qr/^File name is required/);
-
