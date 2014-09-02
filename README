@@ -32,10 +32,10 @@ Core:
 Others:
 
   Email::MIME::ContentType  - 1.014 or later
-  Email::MIME::Modifier	    - 1.442 or later
-  Email::MIME::Creator	    - 1.454 or later
-  Email::Simple		    - 2.003 or later
-  OLE::Storage_Lite	    - 0.14 or later
+  Email::MIME::Modifier     - 1.442 or later
+  Email::MIME::Creator      - 1.454 or later
+  Email::Simple             - 2.003 or later
+  OLE::Storage_Lite         - 0.14 or later
 
 For testing:
 

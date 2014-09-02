@@ -16,7 +16,7 @@ $VERSION = "0.904";
 # Setup command line processing.
 my $verbose = '';
 my $mboxfile = '';
-my $help = '';	    # Print help message and exit.
+my $help = '';      # Print help message and exit.
 GetOptions(
   'mbox=s' => \$mboxfile,
   'verbose' => \$verbose,
@@ -64,8 +64,8 @@ msgconvert.pl [options] <file.msg>...
 
   Options:
     --mbox <file>   deliver messages to mbox file <file>
-    --verbose	    be verbose
-    --help	    help message
+    --verbose       be verbose
+    --help          help message
 
 =head1 OPTIONS
 

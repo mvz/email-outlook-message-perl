@@ -147,8 +147,8 @@ sub to_email_mime {
 
     $bodymime = Email::MIME->create(
       attributes => {
-	content_type => "multipart/alternative",
-	encoding => "8bit",
+        content_type => "multipart/alternative",
+        encoding => "8bit",
       },
       parts => \@parts
     );
@@ -162,8 +162,8 @@ sub to_email_mime {
     $self->_clean_part_header($bodymime);
     my $mult = Email::MIME->create(
       attributes => {
-	content_type => "multipart/mixed",
-	encoding => "8bit",
+        content_type => "multipart/mixed",
+        encoding => "8bit",
       },
       parts => [$bodymime],
     );
@@ -419,24 +419,24 @@ sub _create_mime_rtf_body {
     my $in = 16;
     while (length($buffer) < $output_length) {
       if (@flags == 0) {
-	@flags = split "", unpack "b8", substr $data, $in++, 1;
+        @flags = split "", unpack "b8", substr $data, $in++, 1;
       }
       my $flag = shift @flags;
       if ($flag eq "0") {
-	$buffer .= substr $data, $in++, 1;
+        $buffer .= substr $data, $in++, 1;
       } else {
-	my ($a, $b) = unpack "C2", substr $data, $in, 2;
-	my $offset = ($a << 4) | ($b >> 4);
-	my $length = ($b & 0xf) + 2;
-	my $buflen = length $buffer;
-	my $longoffset = $buflen - ($buflen % 4096) + $offset;
-	if ($longoffset >= $buflen) { $longoffset -= 4096; }
-	while ($length > 0) {
-	  $buffer .= substr $buffer, $longoffset, 1;
-	  $length--;
-	  $longoffset++;
-	}
-	$in += 2;
+        my ($a, $b) = unpack "C2", substr $data, $in, 2;
+        my $offset = ($a << 4) | ($b >> 4);
+        my $length = ($b & 0xf) + 2;
+        my $buflen = length $buffer;
+        my $longoffset = $buflen - ($buflen % 4096) + $offset;
+        if ($longoffset >= $buflen) { $longoffset -= 4096; }
+        while ($length > 0) {
+          $buffer .= substr $buffer, $longoffset, 1;
+          $length--;
+          $longoffset++;
+        }
+        $in += 2;
       }
     }
     $buffer = substr $buffer, length $BASE_BUFFER;

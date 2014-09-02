@@ -96,10 +96,10 @@ sub _process_subdirectory {
     my $is_msg = 1;
     foreach my $child (@{$pps->{Child}}) {
       unless ($self->_get_pps_name($child) =~ / ^ ( __recip | __attach
-	| __substg1 | __nameid | __properties ) /x
+        | __substg1 | __nameid | __properties ) /x
       ) {
-	$is_msg = 0;
-	last;
+        $is_msg = 0;
+        last;
       }
     }
     if ($is_msg) {
@@ -112,14 +112,14 @@ sub _process_subdirectory {
       $self->{ENCODING} = '8bit';
     } else {
       foreach my $child (@{$pps->{Child}}) {
-	if (eval { $child->isa('OLE::Storage_Lite::PPS::File')}) {
-	  foreach my $prop ("Time1st", "Time2nd") {
-	    $child->{$prop} = undef;
-	  }
-	}
+        if (eval { $child->isa('OLE::Storage_Lite::PPS::File')}) {
+          foreach my $prop ("Time1st", "Time2nd") {
+            $child->{$prop} = undef;
+          }
+        }
       }
       my $nPps = OLE::Storage_Lite::PPS::Root->new(
-	$pps->{Time1st}, $pps->{Time2nd}, $pps->{Child});
+        $pps->{Time1st}, $pps->{Time2nd}, $pps->{Child});
       my $data;
       my $io = IO::String->new($data);
       binmode($io);
