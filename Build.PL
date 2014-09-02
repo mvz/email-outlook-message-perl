@@ -27,6 +27,11 @@ my $build = Module::Build->new (
     'Module::Build' => 0.38
   },
   script_files => [ 'script/msgconvert' ],
+  meta_merge => {
+    resources => {
+            repository => 'https://github.com/mvz/email-outlook-message-perl'
+    }
+  },
 );
 $build->create_build_script;
 
