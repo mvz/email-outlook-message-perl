@@ -22,7 +22,7 @@ my $build = Module::Build->new (
   configure_requires => {
     'Module::Build' => 0.38
   },
-  script_files => [ 'script/msgconvert.pl' ],
+  script_files => [ 'script/msgconvert' ],
 );
 $build->create_build_script;
 
