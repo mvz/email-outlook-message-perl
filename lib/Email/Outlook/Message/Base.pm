@@ -42,6 +42,8 @@ use IO::String;
 use POSIX;
 use Carp;
 use OLE::Storage_Lite;
+use vars qw($VERSION);
+$VERSION = "0.919";
 
 my $DIR_TYPE = 1;
 my $FILE_TYPE = 2;
