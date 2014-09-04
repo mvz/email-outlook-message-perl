@@ -3,7 +3,7 @@ package Email::Outlook::Message::AddressInfo;
 
 Email::Outlook::Message::AddressInfo - Handle addres data in .msg files
 
-=head1 NAME
+=head1 DESCRIPTION
 
 This is an internal module of Email::Outlook::Message. It is a subclass of
 Email::Outlook::Message::Base.
