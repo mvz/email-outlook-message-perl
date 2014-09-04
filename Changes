@@ -1,3 +1,9 @@
+0.916   2014-09-02
+
+  - Fix dependency list
+  - Fix documentation
+  - Specify version only in the main module
+
 0.915   2014-09-02
 
   - Consistently output CRLF line endings
