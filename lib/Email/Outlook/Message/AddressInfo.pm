@@ -38,8 +38,6 @@ it under the same terms as Perl itself.
 =cut
 use strict;
 use warnings;
-use vars qw($VERSION);
-$VERSION = "0.915";
 use Carp;
 use base 'Email::Outlook::Message::Base';
 
