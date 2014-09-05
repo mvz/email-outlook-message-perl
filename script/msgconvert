@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #
-# msgconvert.pl:
+# msgconvert:
 #
 # Convert .MSG files (made by Outlook (Express)) to multipart MIME messages.
 #
@@ -56,11 +56,11 @@ __END__
 
 =head1 NAME
 
-msgconvert.pl - Convert Outlook .msg files to mbox format
+msgconvert - Convert Outlook .msg files to mbox format
 
 =head1 SYNOPSIS
 
-msgconvert.pl [options] <file.msg>...
+msgconvert [options] <file.msg>...
 
   Options:
     --mbox <file>   deliver messages to mbox file <file>
