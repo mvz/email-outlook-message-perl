@@ -1,3 +1,4 @@
+use 5.006;
 use Module::Build;
 my $build = Module::Build->new (
   module_name => 'Email::Outlook::Message',
