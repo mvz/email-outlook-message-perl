@@ -84,6 +84,8 @@ msgconvert [options] <file.msg>...
 
     Print a brief help message.
 
+=back
+
 =head1 DESCRIPTION
 
 This program will convert the messages contained in the Microsoft Outlook
