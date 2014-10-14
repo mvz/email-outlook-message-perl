@@ -1,8 +1,17 @@
+0.917   2014-10-14
+
+  - Update documentation
+  - Require Perl 5.6 in Build.PL
+  - Ensure full body is rendered for multipart messages when msgconvert
+    delivers to mbox.
+  - Fix POD error in msgconvert (patch by Gregor Herrmann)
+
 0.916   2014-09-02
 
   - Fix dependency list
   - Fix documentation
   - Specify version only in the main module
+  - Add link to GitHub from META files (patch by Gabor Szabo)
 
 0.915   2014-09-02
 
