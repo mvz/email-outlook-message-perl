@@ -37,7 +37,7 @@ foreach my $file (@ARGV) {
   my $msg = new Email::Outlook::Message($file, $verbose);
   my $mail = $msg->to_email_mime;
   if ($using_mbox) {
-    $transport->send($mail, { from => $mail->header('From') || '' });
+    $transport->send($mail->as_string, { from => $mail->header('From') || '' });
   } else {
     my $basename = basename($file, qr/\.msg/i);
     my $outfile = "$basename.eml";
