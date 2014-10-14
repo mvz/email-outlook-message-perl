@@ -3,7 +3,7 @@ package Email::Outlook::Message::Attachment;
 
 Email::Outlook::Message::Attachment - Handle attachment data in .msg files
 
-=head1 NAME
+=head1 DESCRIPTION
 
 This is an internal module of Email::Outlook::Message. It is a subclass of
 Email::Outlook::Message::Base.
@@ -38,8 +38,6 @@ it under the same terms as Perl itself.
 use strict;
 use warnings;
 use Carp;
-use vars qw($VERSION);
-$VERSION = "0.915";
 use Email::MIME::ContentType;
 use base 'Email::Outlook::Message::Base';
 

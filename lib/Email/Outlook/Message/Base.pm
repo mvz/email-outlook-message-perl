@@ -3,7 +3,7 @@ package Email::Outlook::Message::Base;
 
 Email::Outlook::Message::Base - Base parser for .msg files.
 
-=head1 NAME
+=head1 DESCRIPTION
 
 This is an internal module of Email::Outlook::Message.
 
@@ -42,8 +42,6 @@ use IO::String;
 use POSIX;
 use Carp;
 use OLE::Storage_Lite;
-use vars qw($VERSION);
-$VERSION = "0.915";
 
 my $DIR_TYPE = 1;
 my $FILE_TYPE = 2;

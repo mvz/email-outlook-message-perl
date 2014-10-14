@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #
-# msgconvert.pl:
+# msgconvert:
 #
 # Convert .MSG files (made by Outlook (Express)) to multipart MIME messages.
 #
@@ -37,7 +37,7 @@ foreach my $file (@ARGV) {
   my $msg = new Email::Outlook::Message($file, $verbose);
   my $mail = $msg->to_email_mime;
   if ($using_mbox) {
-    $transport->send($mail, { from => $mail->header('From') || '' });
+    $transport->send($mail->as_string, { from => $mail->header('From') || '' });
   } else {
     my $basename = basename($file, qr/\.msg/i);
     my $outfile = "$basename.eml";
@@ -56,11 +56,11 @@ __END__
 
 =head1 NAME
 
-msgconvert.pl - Convert Outlook .msg files to mbox format
+msgconvert - Convert Outlook .msg files to mbox format
 
 =head1 SYNOPSIS
 
-msgconvert.pl [options] <file.msg>...
+msgconvert [options] <file.msg>...
 
   Options:
     --mbox <file>   deliver messages to mbox file <file>
@@ -83,6 +83,8 @@ msgconvert.pl [options] <file.msg>...
 =item B<--help>
 
     Print a brief help message.
+
+=back
 
 =head1 DESCRIPTION
 

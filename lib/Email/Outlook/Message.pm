@@ -21,12 +21,12 @@ Parses .msg message files as produced by Microsoft Outlook.
 
 =item B<new($msg, $verbose)>
 
-    Parse the file pointed at by $msg. Set $verbose to a true value to
-    print information about skipped parts of the .msg file on STDERR.
+Parse the file pointed at by $msg. Set $verbose to a true value to
+print information about skipped parts of the .msg file on STDERR.
 
 =item B<to_email_mime>
 
-    Output result as an Email::MIME object.
+Output result as an Email::MIME object.
 
 =back
 
@@ -59,7 +59,7 @@ use strict;
 use warnings;
 use 5.006;
 use vars qw($VERSION);
-$VERSION = "0.915";
+$VERSION = "0.917";
 
 use Email::Simple;
 use Email::MIME::Creator;
