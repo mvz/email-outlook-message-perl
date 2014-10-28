@@ -39,7 +39,7 @@ foreach my $file (@ARGV) {
   if ($using_mbox) {
     $transport->send($mail->as_string, { from => $mail->header('From') || '' });
   } else {
-    my $basename = basename($file, qr/\.msg/i);
+    my $basename = fileparse($file, qr/\.msg/i);
     my $outfile = "$basename.eml";
     open OUT, ">:utf8", $outfile
       or die "Can't open $outfile for writing: $!";
