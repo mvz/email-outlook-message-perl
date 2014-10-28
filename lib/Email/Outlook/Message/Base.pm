@@ -300,9 +300,6 @@ sub _parse_item_name {
 
   if ($name =~ / ^ __substg1 [ ] 0_ (....) (....) $ /x) {
     my ($property, $encoding) = ($1, $2);
-    if ($encoding eq $ENCODING_UNICODE and not ($self->{HAS_UNICODE})) {
-      $self->{HAS_UNICODE} = 1;
-    }
     return ($property, $encoding);
   } else {
     return (undef, undef);

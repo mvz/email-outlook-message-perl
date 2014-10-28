@@ -126,7 +126,7 @@ sub _empty_new {
 
   return bless {
     ADDRESSES => [], ATTACHMENTS => [], FROM_ADDR_TYPE => "",
-    HAS_UNICODE => 0, VERBOSE => 0, EMBEDDED => 1
+    VERBOSE => 0, EMBEDDED => 1
   }, $class;
 }
 
