@@ -63,7 +63,7 @@ sub test_to_email_mime_with_plain_part {
   ok(defined $m);
   ok(($m->parts) == 1);
   is($m->body, "plain");
-  is($m->content_type, "text/plain; charset=\"ISO-8859-1\"");
+  is($m->content_type, "text/plain; charset=\"UTF8\"");
 }
 
 sub test_to_email_mime_with_html_part {
