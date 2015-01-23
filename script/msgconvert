@@ -30,6 +30,10 @@ defined $ARGV[0] or pod2usage(2);
 
 my $using_mbox = $mboxfile ne '';
 my $using_outfile = $outfile ne '';
+if ($using_outfile && scalar @ARGV > 1) {
+    die "The --outfile parameter does not allow to specify more than one " .
+        "<file.msg>. See --help for more details.";
+}
 my $transport;
 
 if ($using_mbox) {
@@ -70,11 +74,13 @@ msgconvert - Convert Outlook .msg files to mbox format
 
 msgconvert [options] <file.msg>...
 
+msgconvert --outfile <outfile> <file.msg>
+
   Options:
-    --mbox <file>    deliver messages to mbox file <file>
-    --outfile <file> write message to <file> or - for STDOUT
-    --verbose        be verbose
-    --help           help message
+    --mbox <file>      deliver messages to mbox file <file>
+    --outfile <oufile> write message to <outfile> or - for STDOUT
+    --verbose          be verbose
+    --help             help message
 
 =head1 OPTIONS
 
@@ -88,7 +94,8 @@ msgconvert [options] <file.msg>...
 =item B<--outfile>
 
     Writes the message into the outfile instead of individual .eml files. For
-    STDOUT "-" can be used as outfile.
+    STDOUT "-" can be used as outfile. This option cannot be used together with
+    multiple <file.msg> instances.
 
 =item B<--verbose>
 
