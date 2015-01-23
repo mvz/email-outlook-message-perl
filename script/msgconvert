@@ -51,7 +51,7 @@ foreach my $file (@ARGV) {
         $outfile = "$basename.eml";
     }
     if ($outfile eq '-') {
-        *OUT = STDOUT;
+        open OUT, ">&", STDOUT;
     } else {
         open OUT, ">:utf8", $outfile or die "Can't open $outfile for writing: $!";
     }
