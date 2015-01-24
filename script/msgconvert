@@ -16,10 +16,12 @@ $VERSION = "0.904";
 # Setup command line processing.
 my $verbose = '';
 my $mboxfile = '';
+my $outfile = '';
 my $help = '';      # Print help message and exit.
 GetOptions(
   'mbox=s' => \$mboxfile,
   'verbose' => \$verbose,
+  'outfile=s' => \$outfile,
   'help|?' => \$help) or pod2usage(2);
 pod2usage(1) if $help;
 
@@ -27,6 +29,11 @@ pod2usage(1) if $help;
 defined $ARGV[0] or pod2usage(2);
 
 my $using_mbox = $mboxfile ne '';
+my $using_outfile = $outfile ne '';
+if ($using_outfile && scalar @ARGV > 1) {
+    die "The --outfile parameter does not allow to specify more than one " .
+        "<file.msg>. See --help for more details.";
+}
 my $transport;
 
 if ($using_mbox) {
@@ -39,10 +46,15 @@ foreach my $file (@ARGV) {
   if ($using_mbox) {
     $transport->send($mail->as_string, { from => $mail->header('From') || '' });
   } else {
-    my $basename = fileparse($file, qr/\.msg/i);
-    my $outfile = "$basename.eml";
-    open OUT, ">:utf8", $outfile
-      or die "Can't open $outfile for writing: $!";
+    if (!$using_outfile) {
+        my $basename = fileparse($file, qr/\.msg/i);
+        $outfile = "$basename.eml";
+    }
+    if ($outfile eq '-') {
+        open OUT, ">&", STDOUT;
+    } else {
+        open OUT, ">:utf8", $outfile or die "Can't open $outfile for writing: $!";
+    }
     binmode(OUT, ":utf8");
     print OUT $mail->as_string;
     close OUT;
@@ -62,10 +74,13 @@ msgconvert - Convert Outlook .msg files to mbox format
 
 msgconvert [options] <file.msg>...
 
+msgconvert --outfile <outfile> <file.msg>
+
   Options:
-    --mbox <file>   deliver messages to mbox file <file>
-    --verbose       be verbose
-    --help          help message
+    --mbox <file>      deliver messages to mbox file <file>
+    --outfile <oufile> write message to <outfile> or - for STDOUT
+    --verbose          be verbose
+    --help             help message
 
 =head1 OPTIONS
 
@@ -75,6 +90,12 @@ msgconvert [options] <file.msg>...
 
     Deliver to the given mbox file instead of creating individual .eml
     files.
+
+=item B<--outfile>
+
+    Writes the message into the outfile instead of individual .eml files. For
+    STDOUT "-" can be used as outfile. This option cannot be used together with
+    multiple <file.msg> instances.
 
 =item B<--verbose>
 
