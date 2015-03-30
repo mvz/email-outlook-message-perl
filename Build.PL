@@ -20,7 +20,7 @@ my $build = Module::Build->new (
     'Email::MIME' => '1.923',
     'Email::MIME::ContentType' => '1.014',
     'Email::Sender' => '1.3',
-    'Email::Simple' => '2.102',
+    'Email::Simple' => '2.206',
     'OLE::Storage_Lite' => '0.14',
     # Needed for testing
     'IO::All' => '0',
