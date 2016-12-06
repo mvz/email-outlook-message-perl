@@ -372,7 +372,7 @@ sub _create_mime_plain_body {
   return Email::MIME->create(
     attributes => {
       content_type => "text/plain",
-      charset => "UTF8",
+      charset => "UTF-8",
       disposition => "inline",
       encoding => "8bit",
     },
