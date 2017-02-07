@@ -53,9 +53,8 @@ foreach my $file (@ARGV) {
     if ($outfile eq '-') {
         open OUT, ">&", STDOUT;
     } else {
-        open OUT, ">:utf8", $outfile or die "Can't open $outfile for writing: $!";
+        open OUT, ">", $outfile or die "Can't open $outfile for writing: $!";
     }
-    binmode(OUT, ":utf8");
     print OUT $mail->as_string;
     close OUT;
   }
