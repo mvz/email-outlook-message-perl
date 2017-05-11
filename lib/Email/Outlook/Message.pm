@@ -441,7 +441,7 @@ sub _create_mime_rtf_body {
     }
     $buffer = substr $buffer, length $BASE_BUFFER;
   } elsif ($magic == $MAGIC_UNCOMPRESSED_RTF) {
-    $buffer = substr $data, length $BASE_BUFFER;
+    $buffer = substr $data, 16;
   } else {
     carp "Incorrect magic number in RTF body.\n";
   }
