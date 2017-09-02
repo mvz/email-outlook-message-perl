@@ -1,5 +1,8 @@
 Unreleased
 
+  - Write raw binary instead of utf8 (by Andreas Pflug)
+  - Fix default charset (by Gerrit Drost)
+  - Depend on known-good version of Email::Simple
   - Add --outfile parameter to msgconvert (by Mirco Bauer)
 
 0.918   2014-10-28
