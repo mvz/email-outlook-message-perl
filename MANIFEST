@@ -1,5 +1,5 @@
 Build.PL
-Changes
+CHANGELOG
 lib/Email/Outlook/Message.pm
 lib/Email/Outlook/Message/AddressInfo.pm
 lib/Email/Outlook/Message/Attachment.pm

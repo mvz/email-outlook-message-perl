@@ -1,4 +1,4 @@
-Unreleased
+0.919   2017-09-02
 
   - Write raw binary instead of utf8 (by Andreas Pflug)
   - Fix default charset (by Gerrit Drost)
