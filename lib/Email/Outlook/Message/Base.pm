@@ -168,7 +168,6 @@ our $skipproperties = {
   '3A00' => "Account",
   '3A20' => "Transmittable Display Name",
   '3A40' => "Send Rich Info",
-  '3FDE' => "Internet Code Page", # TODO: Perhaps use this.
   # 'Display table properties'
   '3FF8' => "Creator Name",
   '3FF9' => "Creator EntryId",
