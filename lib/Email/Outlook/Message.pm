@@ -96,6 +96,16 @@ our $MAP_SUBITEM_FILE = {
   '1042' => "INREPLYTO",       # In reply to Message-Id
   '3007' => 'DATE2ND',         # Creation Time
   '0039' => 'DATE1ST',         # Outlook sent date
+  '3FDE' => 'CODEPAGE',        # Code page for text or html body
+};
+
+# Map codepage numbers to charset names.  Codepages not listed here just get
+# 'CP' prepended, so 1252 -> 'CP1252'.
+our $MAP_CODEPAGE = {
+  20127 => 'US-ASCII',
+  20866 => 'KOI8-R',
+  28591 => 'ISO-8859-1',
+  65001 => 'UTF-8',
 };
 
 #
@@ -367,12 +377,20 @@ sub _clean_part_header {
   return;
 }
 
+sub _codepage_to_charset {
+  my $codepage = shift;
+  if (defined $codepage) {
+    return $MAP_CODEPAGE->{$codepage} || "CP$codepage";
+  }
+  return 'CP1252';
+}
+
 sub _create_mime_plain_body {
   my $self = shift;
   return Email::MIME->create(
     attributes => {
       content_type => "text/plain",
-      charset => "UTF-8",
+      charset => _codepage_to_charset($self->{CODEPAGE}),
       disposition => "inline",
       encoding => "8bit",
     },
@@ -385,6 +403,7 @@ sub _create_mime_html_body {
   return Email::MIME->create(
     attributes => {
       content_type => "text/html",
+      charset => _codepage_to_charset($self->{CODEPAGE}),
       disposition => "inline",
       encoding => "8bit",
     },

@@ -11,6 +11,8 @@ META.yml
 README
 script/msgconvert
 t/basics.t
+t/charset.t
+t/files/charset.msg
 t/files/gpg_signed.msg
 t/files/plain_jpeg_attached.msg
 t/files/plain_uc_unsent.msg
