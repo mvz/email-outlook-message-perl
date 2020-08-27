@@ -32,7 +32,7 @@ use vars qw($VERSION);
 $VERSION = "0.901";
 
 #----------------------------------------------------------------
-# PrnItem: Displays PPS infomations
+# PrnItem: Displays PPS information
 #----------------------------------------------------------------
 sub PrnItem {
     my($oPps, $iLvl, $iTtl, $iDir, $prData) = @_;

@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-# Needed to recoginize UTF8 string literal for comparing the body.
+# Needed to recognize UTF8 string literal for comparing the body.
 use utf8;
 
 use Test::More tests => 14;
