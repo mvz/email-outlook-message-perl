@@ -394,7 +394,7 @@ sub _create_mime_plain_body {
       disposition => "inline",
       encoding => "8bit",
     },
-    body => $self->{BODY_PLAIN}
+    body_str => $self->{BODY_PLAIN}
   );
 }
 
@@ -407,7 +407,7 @@ sub _create_mime_html_body {
       disposition => "inline",
       encoding => "8bit",
     },
-    body => $self->{BODY_HTML}
+    body_str => $self->{BODY_HTML}
   );
 }
 

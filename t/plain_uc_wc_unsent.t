@@ -6,12 +6,15 @@ use warnings;
 # Needed to recoginize UTF8 string literal for comparing the body.
 use utf8;
 
-use Test::More tests => 14;
+use Test::More tests => 15;
 use Email::Outlook::Message;
 
 my $p = new Email::Outlook::Message('t/files/plain_uc_wc_unsent.msg');
 ok($p, "Parsing succeeded");
 my $m = $p->to_email_mime;
+
+ok($m->as_string !~ /[^\0-\xff]/, "Check no wide characters in output");
+
 is(scalar($m->header_names), 6, "Six headers");
 
 is($m->header("Subject"), "Test for MSGConvert -- plain text", "Testing subject");
@@ -25,7 +28,7 @@ is(scalar(@parts), 2, "Two sub-parts");
 
 my $text = $parts[0];
 like($text->content_type, qr{^text/plain}, "Content type should be text/plain");
-is($text->body, "This is a test\r\nThe body is in p汬ain text", "Check body");
+is($text->body_str, "This is a test\r\nThe body is in p汬ain text", "Check body");
 is(scalar($text->subparts), 0, "No sub-parts");
 
 my $rtf = $parts[1];
