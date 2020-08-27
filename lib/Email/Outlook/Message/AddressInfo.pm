@@ -1,7 +1,7 @@
 package Email::Outlook::Message::AddressInfo;
 =head1 NAME
 
-Email::Outlook::Message::AddressInfo - Handle addres data in .msg files
+Email::Outlook::Message::AddressInfo - Handle address data in .msg files
 
 =head1 DESCRIPTION
 

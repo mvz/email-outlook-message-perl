@@ -201,7 +201,7 @@ sub to_email_mime {
 #
 # Root
 #   Items with properties of the e-mail
-#   Dirs containting adresses
+#   Dirs containing addresses
 #     Items with properties of the address
 #   Dirs containing Attachments
 #     Items with properties of the attachment (including its data)
@@ -480,7 +480,7 @@ sub _copy_header_data {
 
   defined $self->{HEAD} or return;
 
-  # The extra \n is neede for Email::Simple to pick up all headers.
+  # The extra \n is needed for Email::Simple to pick up all headers.
   # This is a change in Email::Simple.
   my $parsed = Email::Simple->new($self->{HEAD} . "\n");
 
@@ -510,7 +510,7 @@ sub _SetHeaderFields {
   # Second preferred option: get it from the SUBMISSION_ID:
   $self->_AddHeaderField($mime, 'Date', $self->_submission_id_date());
 
-  # Most prefered option from the property list
+  # Most preferred option from the property list
   $self->_AddHeaderField($mime, 'Date', $self->{DATE2ND});
   $self->_AddHeaderField($mime, 'Date', $self->{DATE1ST});
 
