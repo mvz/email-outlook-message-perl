@@ -5,6 +5,7 @@
 # Convert .MSG files (made by Outlook (Express)) to multipart MIME messages.
 #
 
+use Email::Address;
 use Email::Outlook::Message;
 use Email::Sender::Transport::Mbox;
 use Getopt::Long;
@@ -44,7 +45,10 @@ foreach my $file (@ARGV) {
   my $msg = new Email::Outlook::Message($file, $verbose);
   my $mail = $msg->to_email_mime;
   if ($using_mbox) {
-    $transport->send($mail->as_string, { from => $mail->header('From') || '' });
+    my $from;
+    my @from_addr = Email::Address->parse($mail->header('From'));
+    $from = $from_addr[0]->address if @from_addr;
+    $transport->send($mail->as_string, { from => $from || '' });
   } else {
     if (!$using_outfile) {
         my $basename = fileparse($file, qr/\.msg/i);

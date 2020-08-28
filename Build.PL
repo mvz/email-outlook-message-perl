@@ -12,6 +12,7 @@ my $build = Module::Build->new (
     'POSIX' => '0',
     # Others - Not versioned
     'Carp' => '0',
+    'Email::Address' => '0',
     'Encode' => '0',
     'Getopt::Long' => '0',
     'IO::String' => '0',
