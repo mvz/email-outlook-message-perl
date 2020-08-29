@@ -17,7 +17,7 @@ my $build = Module::Build->new (
     'IO::String' => '0',
     'Pod::Usage' => '0',
     # Others - Versioned
-    'Email::MIME' => '1.923',
+    'Email::MIME' => '1.949',
     'Email::MIME::ContentType' => '1.014',
     'Email::Sender' => '1.3',
     'Email::Simple' => '2.206',
