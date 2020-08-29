@@ -20,12 +20,12 @@ is(scalar(@parts), 2, "Two sub-parts");
 
 my $text = $parts[0];
 like($text->content_type, qr{^text/plain}, "Content type should be multipart/alternative");
-like($text->content_type, qr{; charset="CP1252"}, "charset should be CP1252");
+like($text->content_type, qr{; charset=CP1252}, "charset should be CP1252");
 is($text->header("Content-Disposition"), "inline", "Testing content disposition");
 is($text->body, "This email contains an email\x85 Email-ception!!!\n\n", "Testing body");
 is(scalar($text->subparts), 0, "No sub-parts");
 my $html = $parts[1];
 like($html->content_type, qr{^text/html}, "Content type should be text/html");
-like($text->content_type, qr{; charset="CP1252"}, "charset should be CP1252");
+like($text->content_type, qr{; charset=CP1252}, "charset should be CP1252");
 is($html->header("Content-Disposition"), "inline", "Testing content disposition");
 is(scalar($html->subparts), 0, "No sub-parts");

@@ -63,7 +63,7 @@ sub test_to_email_mime_with_plain_part {
   ok(defined $m);
   ok(($m->parts) == 1);
   is($m->body, "plain");
-  is($m->content_type, "text/plain; charset=\"CP1252\"");
+  is($m->content_type, "text/plain; charset=CP1252");
 }
 
 sub test_to_email_mime_with_html_part {
@@ -74,7 +74,7 @@ sub test_to_email_mime_with_html_part {
   ok(defined $m);
   ok(($m->parts) == 1);
   is($m->body, "html");
-  is($m->content_type, "text/html; charset=\"CP1252\"");
+  is($m->content_type, "text/html; charset=CP1252");
 }
 
 sub test_to_email_mime_with_two_parts {

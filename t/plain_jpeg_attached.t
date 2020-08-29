@@ -35,6 +35,6 @@ is(scalar($rtf->subparts), 0, "No sub-parts");
 
 my $jpg = $parts[1];
 like($jpg->content_type, qr{^image/jpeg}, "Content type should be image/jpeg");
-is($jpg->header("Content-Disposition"), "attachment; filename=\"test.jpg\"", "Testing content disposition");
+is($jpg->header("Content-Disposition"), "attachment; filename=test.jpg", "Testing content disposition");
 is(scalar($jpg->subparts), 0, "No sub-parts");
 is(length($jpg->body), 7681, "Correct jpeg size");
