@@ -1,0 +1,28 @@
+Date: Mon, 26 Feb 2007 22:57:01 +0000
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary=15987274670.CD99e19.967165
+Content-Transfer-Encoding: 7bit
+Subject: Test for MSGConvert -- plain text
+To: Someone Else <someone@somewhere.com>
+
+
+--15987274670.CD99e19.967165
+Content-Type: text/plain; charset=UTF-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+
+This is a test
+The body is in p汬ain text
+--15987274670.CD99e19.967165
+Content-Type: application/rtf
+Content-Disposition: inline
+Content-Transfer-Encoding: base64
+
+e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZnJvbXRleHQgXGRlZmYwe1xmb250dGJsCg17XGYwXGZz
+d2lzcyBBcmlhbDt9Cg17XGYxXGZtb2Rlcm4gQ291cmllciBOZXc7fQoNe1xmMlxmbmlsXGZjaGFy
+c2V0MiBTeW1ib2w7fQoNe1xmM1xmbW9kZXJuXGZjaGFyc2V0MCBDb3VyaWVyIE5ldzt9fQoNe1xj
+b2xvcnRibFxyZWQwXGdyZWVuMFxibHVlMDtccmVkMFxncmVlbjBcYmx1ZTI1NTt9Cg1cdWMxXHBh
+cmRccGxhaW5cZGVmdGFiMzYwIFxmMFxmczIwIFRoaXMgaXMgYSB0ZXN0XHBhcgoNVGhlIGJvZHkg
+aXMgaW4gcGxhaW4gdGV4dFxwYXIKDX0=
+
+--15987274670.CD99e19.967165--

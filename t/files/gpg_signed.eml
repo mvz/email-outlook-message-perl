@@ -1,0 +1,107 @@
+Date: Tue, 27 Feb 2007 00:12:10 +0100
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary=15987272031.Ae83.966257
+Content-Transfer-Encoding: 7bit
+Subject: Test for MSGConvert
+From: Matijs van Zuijlen <Matijs.van.Zuijlen@xs4all.nl>
+To: matijs@matijs.net
+Message-Id: <20070226231209.GD1841@matijs.net>
+Received: from XXXXXXXXX.XXX.XX.NL ([111.111.111.111]) by XXXXXXXXX.XXX.XX.NL
+ with Microsoft SMTPSVC(6.0.3790.1830); Tue, 27 Feb 2007 00:14:28 +0100
+Received: from xxxx.xxxxxxx.nl ([11.111.11.11]) by XXXXXXXXX.XXX.XX.NL with
+ Microsoft SMTPSVC(6.0.3790.1830); Tue, 27 Feb 2007 00:14:28 +0100
+Received: from smtp-vbr13.xs4all.nl ([194.109.24.33]) by xxxx.xxxxxxx.nl with
+ esmtp (Exim 4.66 (FreeBSD)) (envelope-from <matijs@matijs.net>) id
+ 1HLp12-0000il-T7 for matijs@xxxxxx.nl; Tue, 27 Feb 2007 00:14:28 +0100
+Received: from localhost (mvz.xs4all.nl [80.126.4.68]) by
+ smtp-vbr13.xs4all.nl (8.13.8/8.13.8) with ESMTP id l1QNCFIW093173 for
+ <matijs@xxxxxx.nl>; Tue, 27 Feb 2007 00:12:20 +0100 (CET) (envelope-from
+ matijs@matijs.net)
+Received: from matijs by localhost with local (Exim 4.63) (envelope-from
+ <matijs@matijs.net>) id 1HLp0s-0005Jg-49; Tue, 27 Feb 2007 00:12:10 +0100
+Content-Disposition: inline
+User-Agent: Mutt/1.5.13 (2006-08-11)
+X-Virus-Scanned: by XS4ALL Virus Scanner
+X-SA-Exim-Connect-IP: 194.109.24.33
+X-SA-Exim-Mail-From: matijs@matijs.net
+X-Spam-Checker-Version: SpamAssassin 3.1.8 (2007-02-13) on xxxx.xxxxxxx.nl
+X-Spam-Level: 
+X-Spam-Status: No, score=-1.7 required=5.0 tests=AWL,BAYES_00
+ autolearn=unavailable version=3.1.8
+X-SA-Exim-Version: 4.2
+X-SA-Exim-Scanned: Yes (on xxxx.xxxxxxx.nl)
+Return-Path: matijs@matijs.net
+X-OriginalArrivalTime: 26 Feb 2007 23:14:28.0715 (UTC)
+ FILETIME=[DD42BBB0:01C759FB]
+
+
+--15987272031.Ae83.966257
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary=15987272030.AFCD8a.966257
+Content-Transfer-Encoding: 7bit
+
+
+--15987272030.AFCD8a.966257
+Content-Type: text/plain; charset=US-ASCII
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+
+This is yet another test.
+-- 
+Matijs van Zuijlen					http://www.matijs.net/
+
+--15987272030.AFCD8a.966257
+Content-Type: application/rtf
+Content-Disposition: inline
+Content-Transfer-Encoding: base64
+
+e1xydGYxXGFuc2lcYW5zaWNwZzEyNTJcZnJvbXRleHQgXGRlZmYwe1xmb250dGJsCg17XGYwXGZz
+d2lzcyBBcmlhbDt9Cg17XGYxXGZtb2Rlcm4gQ291cmllciBOZXc7fQoNe1xmMlxmbmlsXGZjaGFy
+c2V0MiBTeW1ib2w7fQoNe1xmM1xmbW9kZXJuXGZjaGFyc2V0MCBDb3VyaWVyIE5ldzt9fQoNe1xj
+b2xvcnRibFxyZWQwXGdyZWVuMFxibHVlMDtccmVkMFxncmVlbjBcYmx1ZTI1NTt9Cg1cdWMxXHBh
+cmRccGxhaW5cZGVmdGFiMzYwIFxmMFxmczIwIFRoaXMgaXMgeWV0IGFub3RoZXIgdGVzdC5ccGFy
+Cg0tLSBccGFyCg1NYXRpanMgdmFuIFp1aWpsZW5cdGFiIFx0YWIgXHRhYiBcdGFiIFx0YWIgaHR0
+cDovL3d3dy5tYXRpanMubmV0L1xwYXIKDX0=
+
+--15987272030.AFCD8a.966257--
+
+--15987272031.Ae83.966257
+Content-ID: 
+MIME-Version: 1.0
+Content-Type: multipart/signed
+Content-Disposition: attachment
+Content-Transfer-Encoding: 8bit
+
+MIME-Version: 1.0
+Content-Disposition: inline
+X-MIMEOLE: Produced By Microsoft MimeOLE V6.00.2900.3028
+Content-Type: multipart/signed;
+	micalg=pgp-sha1;
+	protocol="application/pgp-signature";
+	boundary="cHMo6Wbp1wrKhbfi"
+
+
+--cHMo6Wbp1wrKhbfi
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
+
+This is yet another test.
+--=20
+Matijs van Zuijlen					http://www.matijs.net/
+
+--cHMo6Wbp1wrKhbfi
+Content-Type: application/pgp-signature; name="signature.asc"
+Content-Description: Digital signature
+Content-Disposition: inline
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.6 (GNU/Linux)
+
+iD8DBQFF42lJh3TgaXYDPEERAoDrAJ9RGi0X4EtYw/fkgKxmiWLrqgc1FgCfcaCw
+kJeEQM9ww/GKJQ1VGoPjODM=
+=CprJ
+-----END PGP SIGNATURE-----
+
+--cHMo6Wbp1wrKhbfi--
+--15987272031.Ae83.966257--
