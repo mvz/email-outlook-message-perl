@@ -407,7 +407,7 @@ sub _create_mime_html_body {
       disposition => "inline",
       encoding => "8bit",
     },
-    body_str => $self->{BODY_HTML}
+    body => $self->{BODY_HTML}
   );
 }
 
