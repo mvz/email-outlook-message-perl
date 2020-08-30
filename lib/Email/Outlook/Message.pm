@@ -377,6 +377,11 @@ sub _clean_part_header {
   return;
 }
 
+sub _body_character_set {
+  my $self = shift;
+  return _codepage_to_charset($self->{CODEPAGE});
+}
+
 sub _codepage_to_charset {
   my $codepage = shift;
   if (defined $codepage) {
@@ -387,14 +392,20 @@ sub _codepage_to_charset {
 
 sub _create_mime_plain_body {
   my $self = shift;
+  my $charset = $self->_body_character_set;
+  my $body_str = $self->{BODY_PLAIN};
+  if ($charset ne "UTF-8") {
+    # In this case, the body is a string of octets and needs to be decoded.
+    $body_str = Encode::decode($charset, $body_str);
+  }
   return Email::MIME->create(
     attributes => {
       content_type => "text/plain",
-      charset => _codepage_to_charset($self->{CODEPAGE}),
+      charset => $charset,
       disposition => "inline",
       encoding => "8bit",
     },
-    body => $self->{BODY_PLAIN}
+    body_str => $body_str
   );
 }
 
@@ -403,7 +414,7 @@ sub _create_mime_html_body {
   return Email::MIME->create(
     attributes => {
       content_type => "text/html",
-      charset => _codepage_to_charset($self->{CODEPAGE}),
+      charset => $self->_body_character_set,
       disposition => "inline",
       encoding => "8bit",
     },
