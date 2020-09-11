@@ -38,6 +38,8 @@ it under the same terms as Perl itself.
 use strict;
 use warnings;
 use Carp;
+use vars qw($VERSION);
+$VERSION = "0.919";
 use Email::MIME::ContentType;
 use base 'Email::Outlook::Message::Base';
 
