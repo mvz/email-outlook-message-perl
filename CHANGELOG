@@ -1,9 +1,21 @@
+0.920   2020-09-11
+
+  - Use the "Internet Code Page" property to set the character set for text and
+    HTML bodies (by Olly Betts)
+  - Fix typos in comments and docs (by Olly Betts)
+  - Update Email::MIME dependency to ensure consistent results
+  - Fix wide character handling (by Olly Betts and Matijs van Zuijlen)
+  - Fix mbox separators in msgconvert (by Olly Betts)
+  - Add back VERSION to supporting modules to avoid upgrade issues
+
 0.919   2017-09-02
 
-  - Write raw binary instead of utf8 (by Andreas Pflug)
-  - Fix default charset (by Gerrit Drost)
-  - Depend on known-good version of Email::Simple
   - Add --outfile parameter to msgconvert (by Mirco Bauer)
+  - Depend on known-good version of Email::Simple
+  - Add oledump script to the distribution
+  - Fix default charset (by Gerrit Drost)
+  - Write raw binary instead of utf8 (by Andreas Pflug)
+  - Fix bug with extracting uncompressed RTF content (by ztravis)
 
 0.918   2014-10-28
 
@@ -14,16 +26,16 @@
 
   - Update documentation
   - Require Perl 5.6 in Build.PL
+  - Fix POD error in msgconvert (patch by Gregor Herrmann)
   - Ensure full body is rendered for multipart messages when msgconvert
     delivers to mbox.
-  - Fix POD error in msgconvert (patch by Gregor Herrmann)
 
 0.916   2014-09-02
 
-  - Fix dependency list
-  - Fix documentation
-  - Specify version only in the main module
   - Add link to GitHub from META files (patch by Gabor Szabo)
+  - Specify version only in the main module
+  - Fix documentation
+  - Fix dependency list
 
 0.915   2014-09-02
 

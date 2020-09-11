@@ -29,7 +29,7 @@ Matijs van Zuijlen, C<matijs@matijs.net>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2002--2014 by Matijs van Zuijlen
+Copyright 2002--2020 by Matijs van Zuijlen
 
 This module is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -39,7 +39,7 @@ use strict;
 use warnings;
 use Carp;
 use vars qw($VERSION);
-$VERSION = "0.919";
+$VERSION = "0.920";
 use Email::MIME::ContentType;
 use base 'Email::Outlook::Message::Base';
 

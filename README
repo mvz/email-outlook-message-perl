@@ -12,7 +12,7 @@ DESCRIPTION
 
 VERSION
 
-    0.919
+    0.920
 
 INSTALLATION
 
@@ -48,7 +48,7 @@ DEPENDENCIES
 
 COPYRIGHT AND LICENCE
 
-    Copyright 2002--2014 Matijs van Zuijlen.
+    Copyright 2002--2020 Matijs van Zuijlen.
 
     This program is free software; you can redistribute it and/or
     modify it under the same terms as Perl itself.

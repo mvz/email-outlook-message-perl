@@ -9,8 +9,8 @@
 # Displays PPS structure of specified file
 # Just subset of lls that is distributed with OLE::Storage
 #
-# Changes made by Matijs van Zuijlen:
-#   2002.04.16:
+# Changes made:
+#   2002.04.16 by Matijs van Zuijlen:
 #       Indenting
 #       Added #! line.
 #       Moved main of program to end.
@@ -18,8 +18,10 @@
 #       Removed prototype info from PrnItem, awaiting knowledge on how to
 #       resolve warnings about it.
 #       Added code to print data as well.
-#   2002.04.17:
+#   2002.04.17 by Matijs van Zuijlen:
 #       Allow more characters as printable.
+#   2020.08.27 by Olly Betts:
+#       Fix typos in comments and docs
 #
 #=================================================================
 
@@ -29,7 +31,7 @@ use Getopt::Long;
 use Pod::Usage;
 use locale;
 use vars qw($VERSION);
-$VERSION = "0.901";
+$VERSION = "0.920";
 
 #----------------------------------------------------------------
 # PrnItem: Displays PPS information

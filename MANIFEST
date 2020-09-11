@@ -25,3 +25,4 @@ t/plain_uc_wc_unsent.t
 t/plain_unsent.t
 t/pod_coverage.t
 TODO
+Makefile.PL
