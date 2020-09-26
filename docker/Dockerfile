@@ -1,3 +1,4 @@
+# Full image is required to install some modules.
 FROM perl:5 AS builder
 
 WORKDIR /build
