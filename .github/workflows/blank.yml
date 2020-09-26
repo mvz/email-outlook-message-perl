@@ -22,7 +22,7 @@ jobs:
         uses: shogo82148/actions-setup-perl@v1.6.2
 
       - name: Restore install dependencies from cache
-        uses: actions/cache@v1.0.3
+        uses: actions/cache@v2
         with:
           path: /opt/hostedtoolcache/perl
           key: builddeps-${{ hashFiles('**/Build.PL') }}
