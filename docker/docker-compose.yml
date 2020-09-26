@@ -1,0 +1,9 @@
+version: "3"
+
+services:
+  app:
+    container_name: "email-outlook-message-perl"
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    image: "mvz/email-outlook-message-perl"
