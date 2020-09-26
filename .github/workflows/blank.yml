@@ -3,9 +3,9 @@ name: CI
 # Trigger the workflow on push or pull request events but only for the master branch
 on:
   push:
-    branches: [master, feature/caching-dependencies]
+    branches: [ master ]
   pull_request:
-    branches: [master]
+    branches: [ master ]
 
 jobs:
   # This workflow contains a single job called "build"
