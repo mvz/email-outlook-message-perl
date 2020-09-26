@@ -1,7 +1,7 @@
 version: "3"
 
 services:
-  app:
+  msgconvert:
     container_name: "email-outlook-message-perl"
     build:
       context: ../
