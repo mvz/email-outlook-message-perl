@@ -3,9 +3,9 @@ name: CI
 # Trigger the workflow on push or pull request events but only for the master branch
 on:
   push:
-    branches: [ master ]
+    branches: [master, feature/caching-dependencies]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   # This workflow contains a single job called "build"
@@ -20,9 +20,17 @@ jobs:
 
       - name: Setup Perl environment
         uses: shogo82148/actions-setup-perl@v1.6.2
-      
+
+      - name: Restore dependencies from cache
+        uses: actions/cache@v1.0.3
+        with:
+          path: /usr/local/lib/perl5
+          key: builddeps-${{ hashFiles('**/Build.PL') }}
+          restore-keys: |
+            builddeps-
+
       - name: Install dependencies
         run: cpanm --installdeps .
-        
+
       - name: Run tests
         run: prove -lv t
