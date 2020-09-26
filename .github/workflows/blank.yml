@@ -21,10 +21,10 @@ jobs:
       - name: Setup Perl environment
         uses: shogo82148/actions-setup-perl@v1.6.2
 
-      - name: Restore dependencies from cache
+      - name: Restore install dependencies from cache
         uses: actions/cache@v1.0.3
         with:
-          path: /usr/local/lib/perl5
+          path: /opt/hostedtoolcache/perl
           key: builddeps-${{ hashFiles('**/Build.PL') }}
           restore-keys: |
             builddeps-
