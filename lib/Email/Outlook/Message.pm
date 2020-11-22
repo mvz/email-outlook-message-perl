@@ -377,22 +377,34 @@ sub _clean_part_header {
   return;
 }
 
-sub _body_character_set {
+sub _body_plain_character_set {
   my $self = shift;
-  return _codepage_to_charset($self->{CODEPAGE});
+  my $body_encoding = $self->{BODY_PLAIN_ENCODING};
+  $self->_body_character_set($body_encoding)
 }
 
-sub _codepage_to_charset {
-  my $codepage = shift;
-  if (defined $codepage) {
+sub _body_html_character_set {
+  my $self = shift;
+  my $body_encoding = $self->{BODY_HTML_ENCODING};
+  $self->_body_character_set($body_encoding)
+}
+
+sub _body_character_set {
+  my $self = shift;
+  my $body_encoding = shift;
+  my $codepage = $self->{CODEPAGE};
+  if (defined $body_encoding && $body_encoding eq "001F") {
+    return "UTF-8";
+  } elsif (defined $codepage) {
     return $MAP_CODEPAGE->{$codepage} || "CP$codepage";
+  } else {
+    return 'CP1252';
   }
-  return 'CP1252';
 }
 
 sub _create_mime_plain_body {
   my $self = shift;
-  my $charset = $self->_body_character_set;
+  my $charset = $self->_body_plain_character_set;
   my $body_str = $self->{BODY_PLAIN};
   if ($charset ne "UTF-8") {
     # In this case, the body is a string of octets and needs to be decoded.
@@ -414,7 +426,7 @@ sub _create_mime_html_body {
   return Email::MIME->create(
     attributes => {
       content_type => "text/html",
-      charset => $self->_body_character_set,
+      charset => $self->_body_html_character_set,
       disposition => "inline",
       encoding => "8bit",
     },

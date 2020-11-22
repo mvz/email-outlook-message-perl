@@ -58,6 +58,7 @@ sub test_to_email_mime_with_no_parts {
 sub test_to_email_mime_with_plain_part {
   my $p = shift;
   $p->{BODY_PLAIN} = "plain";
+  $p->{BODY_PLAIN_ENCODING} = "001E";
   $p->{BODY_HTML} = undef;
   my $m = $p->to_email_mime;
   ok(defined $m);
@@ -70,6 +71,7 @@ sub test_to_email_mime_with_html_part {
   my $p = shift;
   $p->{BODY_PLAIN} = undef;
   $p->{BODY_HTML} = "html";
+  $p->{BODY_HTML_ENCODING} = "001E";
   my $m = $p->to_email_mime;
   ok(defined $m);
   ok(($m->parts) == 1);
@@ -80,7 +82,9 @@ sub test_to_email_mime_with_html_part {
 sub test_to_email_mime_with_two_parts {
   my $p = shift;
   $p->{BODY_PLAIN} = "plain";
+  $p->{BODY_PLAIN_ENCODING} = "001E";
   $p->{BODY_HTML} = "html";
+  $p->{BODY_HTML_ENCODING} = "001E";
   my $m = $p->to_email_mime;
   ok(defined $m);
   ok(($m->parts) == 2);

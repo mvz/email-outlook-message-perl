@@ -391,6 +391,7 @@ sub _use_property {
   my ($self, $key, $property) = @_;
   my ($encoding, $data) = @{$self->get_mapi_property($property)};
   $self->{$key} = $self->_decode_mapi_property($encoding, $data);
+  $self->{"${key}_ENCODING"} = $encoding;
 
   $self->{VERBOSE}
     and $self->_log_property("Using   ", $property, $key);
