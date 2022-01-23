@@ -10,12 +10,14 @@
 ^MANIFEST.bak$
 ^MANIFEST.SKIP$
 ^mapitags.h$
-^.*\.tar\.gz$
-\..*\.swp$
 ^\.git/
+^\.github/
 ^\.gitignore$
+^script/oledump
 ^tmp/
 ^debian/
 ^docs/
 ^MYMETA\.yml$
 ^MYMETA\.json$
+.*\.tar\.gz$
+\..*\.swp$
