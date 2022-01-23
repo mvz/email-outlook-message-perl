@@ -39,7 +39,7 @@ it under the same terms as Perl itself.
 use strict;
 use warnings;
 use vars qw($VERSION);
-$VERSION = "0.920";
+$VERSION = "0.921";
 use Carp;
 use base 'Email::Outlook::Message::Base';
 

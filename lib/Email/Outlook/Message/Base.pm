@@ -43,7 +43,7 @@ use POSIX;
 use Carp;
 use OLE::Storage_Lite;
 use vars qw($VERSION);
-$VERSION = "0.920";
+$VERSION = "0.921";
 
 my $DIR_TYPE = 1;
 my $FILE_TYPE = 2;

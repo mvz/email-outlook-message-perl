@@ -31,7 +31,7 @@ use Getopt::Long;
 use Pod::Usage;
 use locale;
 use vars qw($VERSION);
-$VERSION = "0.920";
+$VERSION = "0.921";
 
 #----------------------------------------------------------------
 # PrnItem: Displays PPS information

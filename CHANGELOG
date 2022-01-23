@@ -1,3 +1,11 @@
+0.921   2022-01-23
+
+  - Adjust test suite to work with lower Email::MIME versions and lower the
+    dependency accordingly (by Axel Beckert)
+  - Ignore the codepage attribute for message bodies that are marked as being
+    unicode-encoded
+  - Adjust full_structure test to work with all supported Email::MIME versions
+
 0.920   2020-09-11
 
   - Use the "Internet Code Page" property to set the character set for text and
