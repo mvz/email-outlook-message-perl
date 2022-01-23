@@ -57,7 +57,7 @@ cmRccGxhaW5cZGVmdGFiMzYwIFxmMFxmczIwIHRlc3RccGFyCg19
 --15987272481.a3dF7.966347
 Content-ID: 
 Content-Type: image/jpeg; name=test.jpg
-Content-Disposition: attachment; filename=test.jpg
+Content-Disposition: attachment; filename="test.jpg"
 Content-Transfer-Encoding: base64
 
 /9j/4AAQSkZJRgABAQEASABIAAD/4QAWRXhpZgAATU0AKgAAAAgAAAAAAAD//gATQ3JlYXRlZCB3

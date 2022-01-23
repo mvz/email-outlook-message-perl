@@ -61,6 +61,7 @@ sub get_headers {
   my @arr = map {
     my @h = map { $_ =~ s/\s\s*/ /sg; $_ } sort $m->header($_);
     @h = map { sanitize_content_type($_) } @h if lc $_ eq 'content-type';
+    @h = map { sanitize_content_disposition($_) } @h if lc $_ eq 'content-disposition';
     $_ . ": " . join "\n", @h;
   } @names;
   return \@arr;
@@ -73,6 +74,12 @@ sub sanitize_content_type {
   delete $at->{boundary};
   $at->{charset} = "us-ascii" unless exists $at->{charset};
   return join("; ", "$ct->{discrete}/$ct->{composite}",
-    map("$_=\"$ct->{attributes}->{$_}\"",
-      sort keys %{$ct->{attributes}}));
+    map("$_=\"$at->{$_}\"", sort keys %$at));
+}
+
+sub sanitize_content_disposition {
+  my $s = shift;
+  my $cd = parse_content_disposition($s);
+  my $at = $cd->{attributes};
+  return join("; ", map("$_=\"$at->{$_}\"", sort keys %$at));
 }
