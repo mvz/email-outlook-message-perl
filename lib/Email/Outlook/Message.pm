@@ -66,6 +66,7 @@ use Email::MIME::Creator;
 use Email::Outlook::Message::AddressInfo;
 use Email::Outlook::Message::Attachment;
 use Carp;
+use List::Util qw(first);
 use base 'Email::Outlook::Message::Base';
 
 our $skipheaders = {
@@ -105,7 +106,6 @@ our $MAP_CODEPAGE = {
   20127 => 'US-ASCII',
   20866 => 'KOI8-R',
   28591 => 'ISO-8859-1',
-  28592 => 'ISO-8859-2',
   65001 => 'UTF-8',
 };
 
@@ -136,7 +136,7 @@ sub _empty_new {
   my $class = shift;
 
   return bless {
-    ADDRESSES => [], ATTACHMENTS => [], FROM_ADDR_TYPE => "",
+    ADDRESSES => {}, ATTACHMENTS => [], FROM_ADDR_TYPE => "",
     VERBOSE => 0, EMBEDDED => 1
   }, $class;
 }
@@ -242,7 +242,7 @@ sub _process_address {
   my $addr_info = Email::Outlook::Message::AddressInfo->new($pps,
     $self->{VERBOSE});
 
-  push @{$self->{ADDRESSES}}, $addr_info;
+  $self->{ADDRESSES}->{$addr_info->name} = $addr_info->display_address;
   return;
 }
 
@@ -358,14 +358,7 @@ sub _expand_address_list {
 sub _find_name_in_addresspool {
   my ($self, $name) = @_;
 
-  my $addresspool = $self->{ADDRESSES};
-
-  foreach my $address (@{$addresspool}) {
-    if ($name eq $address->name) {
-      return $address->display_address;
-    }
-  }
-  return;
+  return $self->{ADDRESSES}->{$name};
 }
 
 # TODO: Don't really want to need this!
