@@ -66,7 +66,6 @@ use Email::MIME::Creator;
 use Email::Outlook::Message::AddressInfo;
 use Email::Outlook::Message::Attachment;
 use Carp;
-use List::Util qw(first);
 use base 'Email::Outlook::Message::Base';
 
 our $skipheaders = {
