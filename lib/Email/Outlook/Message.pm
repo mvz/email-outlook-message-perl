@@ -318,7 +318,7 @@ sub _AddHeaderField {
 
   #my $oldvalue = $mime->header($fieldname);
   #return if $oldvalue;
-  $mime->header_set($fieldname, $value) if $value;
+  $mime->header_str_set($fieldname, $value) if $value;
   return;
 }
 
