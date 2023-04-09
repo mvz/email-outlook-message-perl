@@ -1,11 +1,11 @@
 name: CI
 
 # Trigger the workflow on push or pull request events but only for the master branch
-on:
+"on":
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   # This workflow contains a single job called "build"
@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Setup Perl environment
-        uses: shogo82148/actions-setup-perl@v1.8.3
+        uses: shogo82148/actions-setup-perl@v1.20.2
 
       - name: Restore install dependencies from cache
         uses: actions/cache@v2
