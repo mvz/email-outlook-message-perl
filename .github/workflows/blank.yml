@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Perl environment
-        uses: shogo82148/actions-setup-perl@v1.24.2
+        uses: shogo82148/actions-setup-perl@v1.25.0
 
       - name: Restore install dependencies from cache
         uses: actions/cache@v3
