@@ -404,7 +404,7 @@ sub _body_html_character_set {
 sub _body_character_set {
   my $self = shift;
   my $body_encoding = shift || "";
-  my $codepage = $self->{CODEPAGE};
+  my $codepage = $self->{CODEPAGE} || $self->{MESSAGE_CODEPAGE};
   my $codepage_value;
 
   if (defined $codepage) {
