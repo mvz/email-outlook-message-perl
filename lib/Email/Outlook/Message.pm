@@ -96,7 +96,8 @@ our $MAP_SUBITEM_FILE = {
   '1042' => "INREPLYTO",       # In reply to Message-Id
   '3007' => 'DATE2ND',         # Creation Time
   '0039' => 'DATE1ST',         # Outlook sent date
-  '3FDE' => 'CODEPAGE',        # Code page for text or html body
+  '3FDE' => 'CODEPAGE',        # PR_INTERNET_CPID - Code page for text or html body
+  '3FFD' => 'MESSAGE_CODEPAGE' # PR_MESSAGE_CODEPAGE - Message Code Page
 };
 
 # Map codepage numbers to charset names.  Codepages not listed here just get
