@@ -417,6 +417,10 @@ sub _body_character_set {
     warn "Body-encoding: $body_encoding; Codepage: $codepage_value";
 
   if ($body_encoding eq "001F") {
+    if (defined $codepage and $codepage_value ne "UTF-8") {
+      $self->{VERBOSE} and
+        warn "Unicode encoding used to encode $codepage_value character set";
+    }
     return "UTF-8";
   } else {
     return $codepage_value;
