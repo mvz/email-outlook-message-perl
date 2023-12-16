@@ -403,14 +403,23 @@ sub _body_html_character_set {
 
 sub _body_character_set {
   my $self = shift;
-  my $body_encoding = shift;
+  my $body_encoding = shift || "";
   my $codepage = $self->{CODEPAGE};
-  if (defined $body_encoding && $body_encoding eq "001F") {
-    return "UTF-8";
-  } elsif (defined $codepage) {
-    return $MAP_CODEPAGE->{$codepage} || "CP$codepage";
+  my $codepage_value;
+
+  if (defined $codepage) {
+    $codepage_value = $MAP_CODEPAGE->{$codepage} || "CP$codepage";
   } else {
-    return 'CP1252';
+    $codepage_value = "CP1252";
+  }
+
+  $self->{VERBOSE} and
+    warn "Body-encoding: $body_encoding; Codepage: $codepage_value";
+
+  if ($body_encoding eq "001F") {
+    return "UTF-8";
+  } else {
+    return $codepage_value;
   }
 }
 
