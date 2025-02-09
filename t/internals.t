@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 17;
+use Test::More tests => 25;
 use Email::Outlook::Message;
 #use MIME::Entity;
 use Email::MIME::Creator;
@@ -13,8 +13,14 @@ test_to_email_mime_with_no_parts($p);
 test_to_email_mime_with_plain_part($p);
 test_to_email_mime_with_html_part($p);
 test_to_email_mime_with_two_parts($p);
+test_to_email_mime_with_plain_part_and_body_codepage();
+test_to_email_mime_with_plain_part_and_message_codepage();
 
 # DONE
+
+sub empty_message {
+  Email::Outlook::Message->_empty_new();
+}
 
 sub test_copy_header_data {
   my $p = shift;
@@ -65,6 +71,32 @@ sub test_to_email_mime_with_plain_part {
   ok(($m->parts) == 1);
   is($m->body, "plain");
   like($m->content_type, qr{^text/plain; charset="?CP1252"?$});
+}
+
+sub test_to_email_mime_with_plain_part_and_body_codepage {
+  my $p = empty_message();
+  $p->{BODY_PLAIN} = "plain";
+  $p->{BODY_PLAIN_ENCODING} = "001E";
+  $p->{CODEPAGE} = 1251;
+  $p->{BODY_HTML} = undef;
+  my $m = $p->to_email_mime;
+  ok(defined $m);
+  ok(($m->parts) == 1);
+  is($m->body, "plain");
+  like($m->content_type, qr{^text/plain; charset="?CP1251"?$});
+}
+
+sub test_to_email_mime_with_plain_part_and_message_codepage {
+  my $p = empty_message();
+  $p->{BODY_PLAIN} = "plain";
+  $p->{BODY_PLAIN_ENCODING} = "001E";
+  $p->{MESSAGE_CODEPAGE} = 1251;
+  $p->{BODY_HTML} = undef;
+  my $m = $p->to_email_mime;
+  ok(defined $m);
+  ok(($m->parts) == 1);
+  is($m->body, "plain");
+  like($m->content_type, qr{^text/plain; charset="?CP1251"?$});
 }
 
 sub test_to_email_mime_with_html_part {
