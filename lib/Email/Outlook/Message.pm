@@ -96,7 +96,8 @@ our $MAP_SUBITEM_FILE = {
   '1042' => "INREPLYTO",       # In reply to Message-Id
   '3007' => 'DATE2ND',         # Creation Time
   '0039' => 'DATE1ST',         # Outlook sent date
-  '3FDE' => 'CODEPAGE',        # Code page for text or html body
+  '3FDE' => 'CODEPAGE',        # PR_INTERNET_CPID - Code page for text or html body
+  '3FFD' => 'MESSAGE_CODEPAGE' # PR_MESSAGE_CODEPAGE - Message Code Page
 };
 
 # Map codepage numbers to charset names.  Codepages not listed here just get
@@ -402,14 +403,27 @@ sub _body_html_character_set {
 
 sub _body_character_set {
   my $self = shift;
-  my $body_encoding = shift;
-  my $codepage = $self->{CODEPAGE};
-  if (defined $body_encoding && $body_encoding eq "001F") {
-    return "UTF-8";
-  } elsif (defined $codepage) {
-    return $MAP_CODEPAGE->{$codepage} || "CP$codepage";
+  my $body_encoding = shift || "";
+  my $codepage = $self->{CODEPAGE} || $self->{MESSAGE_CODEPAGE};
+  my $codepage_value;
+
+  if (defined $codepage) {
+    $codepage_value = $MAP_CODEPAGE->{$codepage} || "CP$codepage";
   } else {
-    return 'CP1252';
+    $codepage_value = "CP1252";
+  }
+
+  $self->{VERBOSE} and
+    warn "Body-encoding: $body_encoding; Codepage: $codepage_value";
+
+  if ($body_encoding eq "001F") {
+    if (defined $codepage and $codepage_value ne "UTF-8") {
+      $self->{VERBOSE} and
+        warn "Unicode encoding used to encode $codepage_value character set";
+    }
+    return "UTF-8";
+  } else {
+    return $codepage_value;
   }
 }
 
