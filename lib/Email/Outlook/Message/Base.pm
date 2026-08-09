@@ -175,7 +175,6 @@ our $skipproperties = {
   '3FF9' => "Creator EntryId",
   '3FFA' => "Last Modifier Name",
   '3FFB' => "Last Modifier EntryId",
-  '3FFD' => "Message Code Page",
   # 'Transport-defined envelope property'
   '4019' => "Sender Flags",
   '401A' => "Sent Representing Flags",
