@@ -63,10 +63,10 @@ sub _process_subdirectory {
   return;
 }
 
-sub name { my $self = shift; return $self->property('NAME') }
-sub address_type { my $self = shift; return $self->property('TYPE') }
-sub address { my $self = shift; return $self->property('ADDRESS') }
-sub smtp_address { my $self = shift; return $self->property('SMTPADDRESS') }
+sub name { $_[0]->property('NAME') }
+sub address_type { $_[0]->property('TYPE') }
+sub address { $_[0]->property('ADDRESS') }
+sub smtp_address { $_[0]->property('SMTPADDRESS') }
 
 sub display_address {
   my $self = shift;

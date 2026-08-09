@@ -193,6 +193,8 @@ our $skipproperties = {
   '6740' => "Sent Mail Server EntryId",
 };
 
+my $decoder = Encode::find_encoding("UTF-16LE");
+
 sub new {
   my ($class, $pps, $verbose) = @_;
   my $self = bless {
@@ -225,12 +227,10 @@ sub property {
   my $map = $self->_property_map;
   # TODO: Prepare reverse map instead of doing dumb lookup.
   foreach my $code (keys %{$map}) {
-    my $key = $map->{$code};
-    next unless $key eq $name;
+    next unless $map->{$code} eq $name;
     my $prop = $self->get_mapi_property($code);
     if ($prop) {
-      my ($encoding, $data) = @{$prop};
-      return $self->_decode_mapi_property($encoding, $data);
+      return $self->_decode_mapi_property(@{$prop});
     } else {
       return;
     }
@@ -241,10 +241,13 @@ sub property {
 sub _decode_mapi_property {
   my ($self, $encoding, $data) = @_;
 
-  if ($encoding eq $ENCODING_ASCII or $encoding eq $ENCODING_UNICODE) {
-    if ($encoding eq $ENCODING_UNICODE) {
-      $data = decode("UTF-16LE", $data);
-    }
+  if ($encoding eq $ENCODING_UNICODE) {
+    $data = $decoder->decode($data);
+    $data =~ s/ \000 $ //sgx;
+    return $data;
+  }
+
+  if ($encoding eq $ENCODING_ASCII) {
     $data =~ s/ \000 $ //sgx;
     return $data;
   }
@@ -359,12 +362,12 @@ sub _process_property_stream {
   my ($n, $len) = ($self->_property_stream_header_length, length $data) ;
 
   while ($n + 16 <= $len) {
-    my @f = unpack "v4", substr $data, $n, 8;
+    my ($f0, $f1) = unpack "v2", substr $data, $n, 8;
 
-    my $encoding = sprintf("%04X", $f[0]);
+    my $encoding = sprintf("%04X", $f0);
 
     unless ($VARIABLE_ENCODINGS->{$encoding}) {
-      my $property = sprintf("%04X", $f[1]);
+      my $property = sprintf("%04X", $f1);
       my $propdata = substr $data, $n+8, 8;
       $self->set_mapi_property($property, [$encoding, $propdata]);
     }
